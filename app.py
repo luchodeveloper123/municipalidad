@@ -1,6 +1,4 @@
 from flask import Flask, render_template, request, redirect, session, send_file, url_for, session, Request, Response
-from tokens import generar_token
-from tokens import decodificar_token
 from collections import Counter
 from io import BytesIO
 import re
@@ -18,7 +16,6 @@ from proyecto import (
     registrar_usuario,
     verificar_usuario,
     conectar_db,
-    decodificar_token,
     buscar_arreglos_realizados_por_plaza,
     obtener_plazas,
     obtener_nombres_plaza,
@@ -28,7 +25,6 @@ from proyecto import (
     exportar_cortes_a_excel,
     obtener_cortes_por_plaza,
     buscar_arreglos_por_plaza,
-    enviar_correo_verificacion,
     ignorar_alerta,
     eliminar_plaza,
     eliminar_corte,
@@ -223,23 +219,6 @@ def eliminar_arreglo(arreglo_id):
     plaza = request.form.get('plaza')
     return redirect(url_for('arreglos_pendientes', mes_anio=mes_anio, plaza=plaza, eliminado='1'))
 
-@app.route('/verificar-email')
-def verificar_email():
-    token = request.args.get('token')
-    user_id = decodificar_token(token)
-
-    if user_id:
-        conn = conectar_db()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE usuarios SET verificado = 1 WHERE id = ?", (user_id,))
-        conn.commit()
-        conn.close()
-        return render_template('verificado.html')  # ✅ Verificación exitosa
-    else:
-        # Mostrar página de error elegante, no solo texto plano
-        return render_template('verificar.html', error="El enlace es inválido o ya expiró.")
-
-
 # -------------------- AUTENTICACIÓN --------------------
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -247,24 +226,23 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
+        user = verificar_usuario(username, password)
 
-        usuario = verificar_usuario(username, password)
+        if user:
+            session['usuario'] = user['username']
+            session['rol'] = user['rol']
 
-        if usuario:
-            if usuario['verificado'] != 1:
-                return render_template('login.html', error="📩 Primero tenés que verificar tu correo para poder iniciar sesión.")
-
-            session['usuario'] = username
-            session['usuario_id'] = usuario['id']
-            session['rol'] = usuario['rol']
-            return redirect('/')
-
-        return render_template('login.html', error="Usuario o contraseña incorrectos")
-
+            if user['rol'] == 'secretaria':
+                return redirect(url_for('panel_secretaria'))
+            elif user['rol'] == 'servicios':
+                return redirect(url_for('panel_servicios'))
+            else:
+                return "Rol no reconocido", 403
+        else:
+            return render_template('login.html', error="Credenciales incorrectas.")
+    
     return render_template('login.html')
 
-def generar_token(usuario_id):
-    return base64.urlsafe_b64encode(str(usuario_id).encode()).decode()
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -286,24 +264,14 @@ def register():
         if rol not in ['servicios', 'secretaria']:
             return render_template('register.html', error="Seleccioná un rol válido")
 
-        # Registrar usuario
+        # Intentar registrar usuario
         if registrar_usuario(username, password, rol):
-            user_id = obtener_usuario_id(username)
-            token = generar_token(user_id)
-
-            # Construir enlace
-            link = f"https://municipalidad-production.up.railway.app/verificar-email?token={token}"
-            # O si usás config:
-            # link = f"{APP_URL}/verificar-email?token={token}"
-
-            if enviar_correo_verificacion(username, link):
-                return render_template('register.html', error="✅ Cuenta creada. Revisá tu correo para activarla.")
-            else:
-                return render_template('register.html', error="⚠️ Cuenta creada pero no se pudo enviar el correo de activación.")
+            return render_template('register.html', success="✅ Cuenta creada correctamente. Ya podés iniciar sesión.")
         else:
             return render_template('register.html', error="Ese correo ya está registrado")
 
     return render_template('register.html')
+
 
 @app.route('/logout')
 def logout():

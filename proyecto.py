@@ -6,10 +6,6 @@ import pandas as pd
 from config import SECRET_KEY
 from functools import wraps
 from flask import session, redirect
-from tokens import generar_token, decodificar_token
-from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
-import smtplib
-from email.mime.text import MIMEText
 import os
 
 # -------------------- CONEXIÓN --------------------
@@ -37,8 +33,7 @@ def crear_base_de_datos():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT UNIQUE NOT NULL,
             password TEXT NOT NULL,
-            rol TEXT NOT NULL,
-            verificado INTEGER DEFAULT 0
+            rol TEXT NOT NULL
         )
     ''')
 
@@ -144,8 +139,6 @@ def verificar_usuario(username, password):
     conn.close()
     return user
 
-
-
 def obtener_usuario_id(username: str) -> int:
     conn = conectar_db()
     cursor = conn.cursor()
@@ -161,36 +154,6 @@ def solo_servicios(f):
             return "⛔ Acceso no autorizado", 403
         return f(*args, **kwargs)
     return decorador
-
-
-def enviar_correo_verificacion(destinatario, enlace):
-    remitente = "obitluciano4@gmail.com"          
-    clave_app = "fuar ipxg kumy klsj"       
-
-    mensaje = MIMEText(f"""
-Hola 👋
-
-Gracias por registrarte en el sistema de Servicios Urbanos.
-
-Para activar tu cuenta, hacé clic en este enlace:
-
-{enlace}
-
-Si no solicitaste este registro, podés ignorar este mensaje.
-    """)
-    mensaje['Subject'] = "Activación de cuenta – Municipalidad"
-    mensaje['From'] = remitente
-    mensaje['To'] = destinatario
-
-    try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as servidor:
-            servidor.login(remitente, clave_app)
-            servidor.send_message(mensaje)
-        print(f"📩 Correo enviado a {destinatario}")
-        return True
-    except Exception as e:
-        print(f"❌ Error al enviar correo: {e}")
-        return False
 
 # -------------------- PLAZAS --------------------
 
