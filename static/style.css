@@ -851,3 +851,10 @@ input[type="radio"]:checked + .boton-rol {
   background-color: #007BFF;
   color: white;
 }
+
+.mensaje-exito {
+  color: #2ecc71;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}

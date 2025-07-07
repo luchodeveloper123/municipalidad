@@ -227,6 +227,8 @@ def login():
         username = request.form['username']
         password = request.form['password']
         user = verificar_usuario(username, password)
+        if not username or not password:
+            return render_template('login.html', error="Completa todos los campos.")
 
         if user:
             session['usuario'] = user['username']
@@ -241,7 +243,6 @@ def login():
         else:
             return render_template('login.html', error="Credenciales incorrectas.")
     
-    return render_template('login.html')
 
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -270,7 +271,6 @@ def register():
         else:
             return render_template('register.html', error="Ese correo ya está registrado")
 
-    return render_template('register.html')
 
 
 @app.route('/logout')
