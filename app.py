@@ -287,7 +287,7 @@ def register():
         if registrar_usuario(username, password, rol):
             user_id = obtener_usuario_id(username)
             token = generar_token(user_id)
-            link = f"http://localhost:5000/verificar-email?token={token}"
+            link = f"https://municipalidad-production.up.railway.app/verificar-email?token={token}"
 
             if enviar_correo_verificacion(username, link):
                 return render_template('register.html', error="✅ Cuenta creada. Revisá tu correo para activarla.")
