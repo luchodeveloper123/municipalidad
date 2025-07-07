@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict
 import pandas as pd
-from app import app
+from config import SECRET_KEY
 from functools import wraps
 from flask import session, redirect
 import base64
@@ -685,13 +685,14 @@ def buscar_arreglos_realizados_por_plaza(nombre_plaza=None, anio=None, mes=None)
             'relevadores': r[6]
         } for r in resultados]
 
-def generar_token(usuario_id):
-    s = URLSafeTimedSerializer(app.secret_key)
-    return s.dumps(usuario_id)
+def generar_token(user_id):
+    s = URLSafeTimedSerializer(SECRET_KEY)
+    return s.dumps(user_id)
+
 
 
 def decodificar_token(token):
-    s = URLSafeTimedSerializer(app.secret_key)
+    s = URLSafeTimedSerializer(SECRET_KEY)
     try:
         return s.loads(token, max_age=3600)  # válido por 1 hora
     except SignatureExpired:

@@ -3,6 +3,7 @@ from collections import Counter
 from io import BytesIO
 import re
 import os
+from config import SECRET_KEY
 import io, sqlite3, csv
 import pandas as pd
 import base64
@@ -43,7 +44,7 @@ from proyecto import (
 )
 
 app = Flask(__name__)
-app.secret_key = 'una_clave_secreta_segura'
+app.secret_key = SECRET_KEY
 
 crear_base_de_datos()
 actualizar_tabla_plazas_agregar_fecha_creacion()
