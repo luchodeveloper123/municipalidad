@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Servicios Urbanos</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+</head>
+<body>
+  <div class="fondo-institucional-fija"></div>
+  <div class="layout">
+<div class="menu-lateral">
+  <div>
+    <h2>🌿 Mantenimiento de Plazas</h2>
+
+    {% if session['rol'] == 'servicios' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+
+    {% elif session['rol'] == 'secretaria' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+    {% endif %}
+
+  </div>
+
+  <a href="/logout"
+     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+    🚪 Cerrar sesión
+  </a>
+</div>
+
+
+
+    <div class="contenido-principal">
+
+      {% if alertas_cortes %}
+      <div id="alertaModal" class="modal-alerta">
+        <div class="modal-contenido">
+          <span class="cerrar" onclick="cerrarModal('alertaModal')">&times;</span>
+          <h3>🚨 Plazas sin corte reciente</h3>
+          <ul>
+            {% for alerta in alertas_cortes %}
+            <li>
+              {{ alerta.mensaje }}
+              <form method="POST" action="{{ url_for('ignorar_alerta_route') }}">
+                <input type="hidden" name="plaza_id" value="{{ alerta.plaza_id }}">
+                <input type="hidden" name="tipo_alerta" value="corte">
+                <button type="submit">Omitir durante 7 días</button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if alertas_arreglos %}
+      <div id="alertaModalArreglos" class="modal-alerta">
+        <div class="modal-contenido">
+          <span class="cerrar" onclick="cerrarModal('alertaModalArreglos')">&times;</span>
+          <h3>🛠 Arreglos pendientes hace más de 13 días</h3>
+          <ul>
+            {% for alerta in alertas_arreglos %}
+            <li>
+              ⚠️ La plaza {{ alerta.nombre }} tiene pendiente el arreglo "{{ alerta.tarea }}" desde hace {{ alerta.dias }} días.
+              <form method="POST" action="{{ url_for('ignorar_alerta_route') }}">
+                <input type="hidden" name="plaza_id" value="{{ alerta.plaza_id }}">
+                <input type="hidden" name="tipo_alerta" value="arreglo">
+                <input type="hidden" name="arreglo_id" value="{{ alerta.id }}">
+                <button type="submit">Omitir durante 7 días</button>
+              </form>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <script>
+    function cerrarModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+  </script>
+
+  <img src="/static/logo.jpg" alt="Logo Municipalidad Tres de Febrero" class="logo-institucional-fijo">
+
+</body>
+</html>

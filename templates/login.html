@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Servicios Urbanos</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+</head>
+<body class="pagina-login">
+  <div class="contenedor-login">
+    <form class="form-login" method="post">
+      <h1>Iniciar sesion</h1>
+      {% if error %}
+        <p class="alerta-login">{{ error }}</p>
+      {% endif %}
+      <input type="text" name="username" placeholder="Usuario" required>
+      <input type="password" name="password" placeholder="Contraseña" required>
+      <button type="submit">Iniciar sesión</button>
+      <div class="enlace-registro">
+        <p>¿No tenés cuenta? <a href="/register">Registrarse</a></p>
+      </div>
+    </form>
+  </div>
+  <img src="/static/logo.jpg" alt="Logo Municipalidad Tres de Febrero" class="logo-municipalidad">
+  <script>
+  sessionStorage.removeItem("modalMostrado");
+</script>
+</body>
+</html>

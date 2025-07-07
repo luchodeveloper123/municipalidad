@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Servicios Urbanos</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+</head>
+<body class="pagina-register">
+  <div class="contenedor-register">
+    <form class="form-register" method="post">
+      <h1>Registrarse</h1>
+
+      {% if error %}
+        <p class="alerta-register">{{ error }}</p>
+      {% endif %}
+
+      <input type="email" name="username" placeholder="Correo electrónico" required>
+      <input type="password" name="password" placeholder="Contraseña" required>
+
+      <label>Área:</label>
+      <div class="grupo-rol">
+        <input type="radio" id="rol_servicios" name="rol" value="servicios" required>
+        <label for="rol_servicios" class="boton-rol">Servicios Urbanos</label>
+
+        <input type="radio" id="rol_secretaria" name="rol" value="secretaria">
+        <label for="rol_secretaria" class="boton-rol">Secretaría</label>
+      </div>
+
+      <button type="submit">Crear cuenta</button>
+
+      <div class="enlace-login">
+        <p>¿Ya tenés cuenta? <a href="/login">Iniciar sesión</a></p>
+      </div>
+    </form>
+  </div>
+  <img src="/static/logo.jpg" alt="Logo Municipalidad Tres de Febrero" class="logo-municipalidad">
+</body>
+</html>

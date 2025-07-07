@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Servicios Urbanos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+</head>
+<body>
+  <div class="fondo-institucional-fija"></div>
+  <div class="layout">
+    <!-- Menú lateral -->
+<div class="menu-lateral">
+  <div>
+    <h2>🌿 Mantenimiento de Plazas</h2>
+
+    {% if session['rol'] == 'servicios' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+
+    {% elif session['rol'] == 'secretaria' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+    {% endif %}
+
+  </div>
+
+  <a href="/logout"
+     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+    🚪 Cerrar sesión
+  </a>
+</div>
+
+
+
+
+    <div class="contenido-principal">
+  <div class="panel activo">
+    <h1>➕ Agregar Nueva Plaza</h1>
+
+    {% if mensaje %}
+      <div class="mensaje-confirmacion">
+        {{ mensaje }}
+      </div>
+    {% endif %}
+
+    <form method="POST" action="/nueva-plaza">
+      <label for="nombre">Nombre de la plaza:</label>
+      <input type="text" name="nombre" id="nombre" placeholder="Ej: Plaza San Martín" required>
+
+      <label for="ubicacion">Ubicación:</label>
+      <input type="text" name="ubicacion" id="ubicacion" placeholder="Ej: Avenida Libertador 1200" required>
+
+      <button type="submit" class="boton">Guardar plaza</button>
+    </form>
+  </div>
+</div>
+
+  </div>
+  <img src="/static/logo.jpg" alt="Logo Municipalidad Tres de Febrero" class="logo-institucional-fijo">
+
+</body>
+</html>

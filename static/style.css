@@ -1,0 +1,853 @@
+/* ---------- Estilos generales ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+  overflow-x: hidden;
+  font-family: 'Segoe UI', sans-serif;
+  background-color: transparent;
+}
+
+
+
+
+/* ---------- Login y Registro ---------- */
+.pagina-login,
+.pagina-register {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-image: url('/static/municipalidad.jpg');
+  background-size: cover;
+  background-position: center;
+  
+}
+
+.logo-municipalidad {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 100px;
+  opacity: 0.9;
+  z-index: 1000;
+  border-radius: 15px;
+}
+
+.contenedor-login,
+.contenedor-register {
+  width: 100%;
+  max-width: 400px;
+  padding: 30px;
+  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  color: white;
+  text-align: center;
+}
+
+input,
+button {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+
+input {
+  background-color: #ffffff;
+  color: #000;
+}
+
+button {
+  background-color: #2c3e50;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #1a252f;
+}
+
+.alerta-login,
+.alerta-register {
+  background-color: #ffe0e0;
+  border-left: 5px solid #e74c3c;
+  padding: 10px;
+  margin-bottom: 15px;
+  color: #c0392b;
+  text-align: left;
+}
+
+.enlace-registro,
+.enlace-login {
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.enlace-registro a,
+.enlace-login a {
+  color: #1abc9c;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.enlace-registro a:hover,
+.enlace-login a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Layout principal ---------- */
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+
+.menu-lateral {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 260px;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-right: 1px solid #ddd;
+  padding: 25px 20px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+  overflow-y: auto;
+  z-index: 100;
+  border-radius: 0 10px 10px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.menu-lateral h2 { 
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+}
+
+
+.menu-lateral button {
+  display: block;
+  width: 100%;
+  margin-bottom: 10px;
+  background-color: #ecf0f1;
+  color: #333;
+  border: none;
+  padding: 10px;
+  text-align: left;
+  border-radius: 5px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.menu-lateral button:hover {
+  background-color: #d0e6f5;
+}
+
+.menu-lateral a {
+  display: inline-block;
+  margin-top: 20px;
+  color: #3498db;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.menu-lateral a:hover {
+  text-decoration: underline;
+}
+
+/* ---------- Contenido con fondo institucional ---------- */
+.contenido-principal {
+  margin-left: 240px;
+  width: calc(100% - 240px);
+  padding: 30px;
+  position: relative;
+  min-height: 100vh;
+  overflow-y: auto;
+  z-index: 1;
+}
+
+
+
+.contenido-principal::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+
+/* ---------- Panel de formulario ---------- */
+.panel {
+  display: none;
+  position: relative;
+  z-index: 2;
+  max-width: 600px;
+  margin: 2em auto;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 2em;
+  border-radius: 10px;
+  box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+}
+
+.panel.activo {
+  display: block;
+}
+
+.panel h2 {
+  margin-top: 0;
+  color: #2c3e50;
+}
+
+.panel form {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel form input,
+.panel form textarea,
+.panel form button {
+  margin: 0.5em 0;
+  padding: 0.6em;
+  font-size: 1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.panel form button {
+  background-color: #27ae60;
+  color: white;
+  font-weight: bold;
+  border: none;
+  transition: background 0.3s;
+}
+
+.panel form button:hover {
+  background-color: #1e874c;
+}
+
+/* ---------- Secciones y columnas ---------- */
+.contenedor-columnas {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.mis-plazas {
+  flex: 1 1 60%;
+}
+
+.busqueda {
+  flex: 1 1 35%;
+  background-color: #f0f0f0;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0px 2px 5px rgba(0,0,0,0.1);
+}
+
+/* ---------- Modal de alertas ---------- */
+.modal-alerta {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0,0,0,0.7);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-contenido {
+  background-color: #fff;
+  padding: 25px 30px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.modal-contenido h3 {
+  margin-top: 0;
+  color: #c0392b;
+}
+
+.modal-contenido ul {
+  text-align: left;
+  margin-top: 15px;
+}
+
+/* Tablas generales */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1em;
+  background-color: #fff;
+  box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+table th,
+table td {
+  padding: 10px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+table th {
+  background-color: #ecf0f1;
+  font-weight: bold;
+}
+
+.btn-secundario {
+  background-color: #3498db;
+  color: white;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 1em;
+}
+
+.btn-secundario:hover {
+  background-color: #2980b9;
+}
+
+.filtro-mensual {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1.5em;
+  flex-wrap: wrap;
+}
+
+.filtro-mensual label {
+  color: #2c3e50;
+  font-weight: bold;
+}
+
+.filtro-mensual input[type="month"] {
+  padding: 0.5em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1em;
+}
+
+.contenedor-arreglos-realizados {
+  max-width: 800px;
+  margin: 2em auto;
+  background-color: rgba(255, 255, 255, 0.96);
+  padding: 2em;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.formulario-realizacion-inline input[type="date"],
+.formulario-realizacion-inline input[type="text"] {
+  padding: 4px 6px;
+  font-size: 13px;
+  max-width: 100px;
+}
+
+.formulario-realizacion-inline button {
+  padding: 5px 8px;
+  font-size: 13px;
+}
+
+.buscador-superior {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 1.5em;
+  gap: 10px;
+}
+
+.branding {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.branding img {
+  height: 40px;
+}
+
+.branding span {
+  font-size: 22px;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.select2-container--default .select2-selection--single {
+  height: 38px;
+  padding: 6px 10px;
+  font-size: 15px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 24px;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 34px;
+}
+
+.select2-container {
+  margin-bottom: 5px;
+}
+
+.formulario-busqueda {
+  position: relative; /* permite ubicar correctamente el dropdown */
+  width: 100%;
+}
+
+.select2-container {
+  width: 100% !important; /* asegura ajuste al contenedor */
+  max-width: 250px;
+  z-index: 10;
+}
+
+.select2-container--default .select2-selection--single {
+  height: 38px;
+  line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 15px;
+  background-color: #fff;
+  transition: border 0.2s ease-in-out;
+}
+
+.select2-container--default .select2-selection--single:hover {
+  border-color: #3498db;
+}
+
+.select2-dropdown {
+  z-index: 9999 !important;
+  border-radius: 6px;
+  box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+}
+
+.formulario-arreglos {
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 1.5em;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  max-width: 700px;
+  margin: 2em auto;
+  position: relative;
+  z-index: 2;
+}
+
+.formulario-arreglos label {
+  font-weight: bold;
+  color: #2c3e50;
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 5px;
+}
+
+.formulario-arreglos input[type="month"],
+.formulario-arreglos select {
+  width: 100%;
+  padding: 10px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  background-color: #fff;
+}
+
+.formulario-arreglos button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  color: white;
+  background-color: #2c3e50;
+  border: none;
+  border-radius: 6px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.formulario-arreglos button:hover {
+  background-color: #1a252f;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #ffffff; /* Blanco para el sidebar */
+    padding: 20px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    height: 100vh; /* Altura completa de la ventana */
+    position: sticky; /* Fija el sidebar si el contenido es largo */
+    top: 0;
+}
+
+.sidebar h3 {
+    color: #333;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.sidebar ul {
+    list-style: none;
+    padding: 0;
+}
+
+.sidebar ul li {
+    margin-bottom: 10px;
+}
+
+.sidebar ul li a {
+    text-decoration: none;
+    color: #555;
+    padding: 10px 15px;
+    display: block;
+    border-radius: 5px;
+    transition: background-color 0.3s ease;
+}
+
+.sidebar ul li a:hover,
+.sidebar ul li.active a {
+    background-color: #e0e7ff; /* Un azul claro para hover y activo */
+    color: #0056b3; /* Un azul más oscuro para el texto activo */
+}
+
+.sidebar ul li a i {
+    margin-right: 10px;
+}
+
+.main-content {
+    flex-grow: 1; /* El contenido principal ocupa el espacio restante */
+    padding: 30px;
+    display: flex;
+    justify-content: center; /* Centra el contenido horizontalmente */
+    align-items: flex-start; /* Alinea el contenido al inicio verticalmente */
+    min-height: 100vh; /* Asegura que el contenedor tenga al menos la altura de la ventana */
+}
+
+/* Estilo para el formulario blanco central */
+.form-card {
+    background-color: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    width: 90%; /* Ajusta el ancho según necesidad */
+    max-width: 650px; /* Ancho máximo para pantallas grandes */
+    text-align: center;
+}
+
+.form-card h2 {
+    margin-top: 0;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 25px;
+    text-align: left; /* Alinea etiquetas e inputs a la izquierda dentro del grupo */
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input[type="text"],
+.form-group input[type="month"] {
+    width: calc(100% - 22px); /* Ancho completo menos padding y border */
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box; /* Incluye padding y borde en el ancho total */
+}
+
+.btn {
+    padding: 12px 25px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 17px;
+    font-weight: bold;
+    margin: 0 10px 15px 0; /* Espacio entre botones */
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.btn-primary {
+    background-color: #28a745; /* Verde, similar al botón de registrar */
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #218838;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background-color: #007bff; /* Azul para el botón de descarga */
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+.results-table-container {
+    margin-top: 30px;
+    text-align: left;
+    overflow-x: auto; /* Permite desplazamiento horizontal si la tabla es muy ancha */
+}
+
+.results-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.results-table-container th,
+.results-table-container td {
+    border: 1px solid #e0e0e0;
+    padding: 12px;
+    text-align: left;
+}
+
+.results-table-container th {
+    background-color: #f8f8f8;
+    font-weight: bold;
+    color: #444;
+}
+
+.results-table-container tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.results-table-container tr:hover {
+    background-color: #f1f1f1;
+}
+
+.results-table-container p {
+    font-style: italic;
+    color: #666;
+}
+
+.cuadro-arreglos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1em;
+  margin-top: 1.5em;
+}
+
+.tarjeta-arreglo {
+  background-color: rgba(255, 255, 255, 0.8); /* Blanco translúcido */
+  border: 1px solid #bcd;
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+
+@keyframes aparecer {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+.tarjeta-arreglo h4 {
+  margin: 0;
+  font-size: 1.1em;
+  color: #333;
+}
+
+.tarjeta-arreglo form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.contenedor-central {
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  max-width: 600px;
+  margin: 2em auto;
+  padding: 1.5em 2em;
+  border-radius: 10px;
+  box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+  max-width: 900px;
+
+}
+
+
+.fondo-institucional-fija {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/static/municipalidad.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center center;
+  z-index: -100;
+  pointer-events: none;
+}
+
+.logo-institucional-fijo {
+  position: fixed;
+  bottom: 15px;
+  right: 15px;
+  width: 100px;              
+  opacity: 1;
+  z-index: 50;
+  pointer-events: none;
+  filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+  border-radius: 30px;
+}
+
+.lista-cortes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.corte-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.fecha-corte {
+  color: #2c3e50;
+  font-size: 0.95em;
+}
+
+.boton-eliminar-corte button {
+  background: none;
+  border: none;
+  font-size: 1.1em;
+  cursor: pointer;
+  color: #e74c3c;
+  padding: 0;
+}
+
+/* Acciones de plaza: link discreto */
+.acciones-plaza {
+  margin-top: 12px;
+  text-align: right;
+}
+
+.boton-eliminar-plaza {
+  color: #e74c3c;
+  font-size: 0.9em;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.boton-eliminar-plaza:hover {
+  background: rgba(231,76,60,0.1);
+}
+
+.btn-global-download,
+button.btn-global-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  background: #2b4d66;
+  color: #fff;
+  border: none;
+  font-size: 1em;
+  border-radius: 4px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mensaje-confirmacion {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 0.8em 1.2em;
+  margin-bottom: 1em;
+  border: 1px solid #c3e6cb;
+  border-radius: 5px;
+  font-weight: 500;
+}
+
+.boton-peligro {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 0.4em 0.9em;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.boton-peligro:hover {
+  background-color: #c0392b;
+}
+
+.grupo-rol {
+  display: flex;
+  gap: 1em;
+  margin-top: 0.5em;
+  margin-bottom: 1em;
+}
+
+input[type="radio"] {
+  display: none;
+}
+
+.boton-rol {
+  background-color: #e0e0e0;
+  padding: 0.6em 1.2em;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  font-weight: bold;
+  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+input[type="radio"]:checked + .boton-rol {
+  background-color: #007BFF;
+  color: white;
+}

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Servicios Urbanos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+  <style>
+    .cuadro-arreglos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1em;
+      margin-top: 1.5em;
+    }
+    .tarjeta-arreglo {
+      background-color: #f0f8ff;
+      border: 1px solid #bcd;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .tarjeta-arreglo h4 {
+      margin: 0;
+      font-size: 1.1em;
+      color: #2b4d66;
+    }
+    .info-item {
+      margin: 0;
+      font-size: 0.95em;
+      color: #333;
+    }
+    .btn-global-download {
+      display: inline-block;
+      padding: 10px 20px;
+      background: #2b4d66;
+      color: white;
+      border-radius: 4px;
+      text-decoration: none;
+      font-size: 1em;
+    }
+    .btn-global-download:hover {
+      background: #1b3150;
+    }
+  </style>
+</head>
+<body>
+  <div class="fondo-institucional-fija"></div>
+  <div class="layout">
+<div class="menu-lateral">
+  <div>
+    <h2>🌿 Mantenimiento de Plazas</h2>
+
+    {% if session['rol'] == 'servicios' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+
+    {% elif session['rol'] == 'secretaria' %}
+      <button onclick="window.location.href='/'">🏠 Inicio</button>
+      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+    {% endif %}
+
+  </div>
+
+  <a href="/logout"
+     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+    🚪 Cerrar sesión
+  </a>
+</div>
+
+
+
+    <div class="contenido-principal">
+      <div class="contenedor-arreglos-realizados">
+        <h1>📋 Mis Plazas</h1>
+
+        <form method="POST"
+              action="{{ url_for('mis_plazas') }}"
+              class="filtro-mensual"
+              style="display:flex; flex-direction:column;
+                     align-items:flex-start; gap:0.5em;
+                     max-width:300px; margin-bottom:2em;">
+          <label for="busqueda">🏞 Plaza:</label>
+          <input type="text" id="busqueda"
+                 name="busqueda"
+                 placeholder="Buscar plaza..."
+                 value="{{ texto }}"
+                 style="width:100%; padding:6px;">
+          <label for="mes_anio">📅 Mes:</label>
+          <input type="month" id="mes_anio"
+                 name="mes_anio"
+                 value="{{ mes_anio }}"
+                 style="width:100%; padding:6px;">
+          <button type="submit" style="padding:6px 12px;">🔍 Filtrar</button>
+        </form>
+
+        {% if plazas %}
+          <div class="cuadro-arreglos">
+            {% for plaza in plazas %}
+              {% set plaza_id = plaza[0] %}
+              <div class="tarjeta-arreglo">
+                <h4>{{ plaza[1] }}</h4>
+                <p class="info-item">📍 {{ plaza[2] }}</p>
+
+                {% set fechas = historial.get(plaza_id, {}).fechas or [] %}
+                {% if fechas %}
+                  <p class="info-item">📅 Días de corte: {{ fechas|length }}</p>
+                  <p class="info-item">🗓 Fechas:</p>
+                  <ul style="list-style:none; padding:0; margin:0;">
+                    {% for corte in fechas %}
+                      <li style="display:flex;
+                                 justify-content:space-between;
+                                 align-items:center;
+                                 margin-bottom:4px;">
+                        <span style="font-size:0.95em; color:#2c3e50;">
+                          {{ corte.fecha }}
+                        </span>
+                        <form action="/eliminar-corte"
+                              method="POST"
+                              style="margin:0;"
+                              onsubmit="return confirm('¿Eliminar este corte?');">
+                          <input type="hidden"
+                                 name="corte_id"
+                                 value="{{ corte.id }}">
+                          <button type="submit"
+                                  style="background:none;
+                                         border:none;
+                                         color:#e74c3c;
+                                         cursor:pointer;
+                                         font-size:1.1em;">
+                            🗑️
+                          </button>
+                        </form>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                {% else %}
+                  <p class="info-item"
+                     style="font-style:italic; color:gray;">
+                    No hay cortes este mes.
+                  </p>
+                {% endif %}
+
+                <!-- Eliminar plaza -->
+                <div style="text-align:right; margin-top:8px;">
+                  <a href="#"
+                     style="color:#e74c3c;
+                            text-decoration:none;
+                            font-size:0.9em;"
+                     onclick="if(confirm('¿Eliminar esta plaza completa?')){ this.nextElementSibling.submit(); }">
+                    🗑️ Eliminar plaza
+                  </a>
+                  <form action="/eliminar-plaza"
+                        method="POST"
+                        style="display:none;">
+                    <input type="hidden"
+                           name="plaza_id"
+                           value="{{ plaza_id }}">
+                  </form>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+
+          <!-- Botón único para descargar todos los cortes del mes -->
+          <div style="text-align:center; margin:2em 0;">
+            <a href="{{ url_for('exportar_cortes', mes_anio=mes_anio) }}"
+               class="btn-global-download">
+              📥 Descargar cortes del mes
+            </a>
+          </div>
+
+        {% else %}
+          <p style="margin-top:2em;
+                    font-style:italic;
+                    color:gray;">
+            No hay plazas para los filtros seleccionados.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <img src="/static/logo.jpg"
+       alt="Logo Municipalidad Tres de Febrero"
+       class="logo-institucional-fijo">
+</body>
+</html>
