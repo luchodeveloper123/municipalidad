@@ -226,25 +226,21 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        user = verificar_usuario(username, password)
+
         if not username or not password:
             return render_template('login.html', error="Completa todos los campos.")
+
+        user = verificar_usuario(username, password)
 
         if user:
             session['usuario'] = user['username']
             session['rol'] = user['rol']
 
-            if user['rol'] == 'secretaria':
-                return redirect(url_for('panel_secretaria'))
-            elif user['rol'] == 'servicios':
-                return redirect(url_for('panel_servicios'))
-            else:
-                return "Rol no reconocido", 403
+            return redirect(url_for('inicio'))  # 👈 Redirige a la función que muestra el index
         else:
             return render_template('login.html', error="Credenciales incorrectas.")
         
     return render_template('login.html')
-    
 
 
 @app.route('/register', methods=['GET', 'POST'])
