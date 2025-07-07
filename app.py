@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, session, send_file,
 from collections import Counter
 from io import BytesIO
 import re
+import os
 import io, sqlite3, csv
 import pandas as pd
 import base64
@@ -685,4 +686,5 @@ def inicio():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)

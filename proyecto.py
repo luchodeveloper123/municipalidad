@@ -13,11 +13,15 @@ import os
 # -------------------- CONEXIÓN --------------------
 
 def conectar_db():
-    if os.environ.get("RENDER") == "true":
-        db_path = os.path.join("/data", "database.db")
+    db_path = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+    if db_path:
+        # Railway montó un volumen persistente: usamos ese path
+        db_path = os.path.join(db_path, "database.db")
     else:
+        # Desarrollo local o entorno sin volumen
         db_path = "database.db"
     return sqlite3.connect(db_path)
+
 
 # -------------------- CREACIÓN Y MIGRACIONES --------------------
 
