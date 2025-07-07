@@ -6,7 +6,7 @@ import pandas as pd
 from config import SECRET_KEY
 from functools import wraps
 from flask import session, redirect
-import base64
+from tokens import generar_token, decodificar_token
 from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import smtplib
 from email.mime.text import MIMEText
@@ -162,11 +162,6 @@ def solo_servicios(f):
         return f(*args, **kwargs)
     return decorador
 
-def decodificar_token(token):
-    try:
-        return int(base64.urlsafe_b64decode(token.encode()).decode())
-    except Exception:
-        return None
 
 def enviar_correo_verificacion(destinatario, enlace):
     remitente = "obitluciano4@gmail.com"          
@@ -685,21 +680,6 @@ def buscar_arreglos_realizados_por_plaza(nombre_plaza=None, anio=None, mes=None)
             'relevadores': r[6]
         } for r in resultados]
 
-def generar_token(user_id):
-    s = URLSafeTimedSerializer(SECRET_KEY)
-    return s.dumps(user_id)
 
-
-
-def decodificar_token(token):
-    s = URLSafeTimedSerializer(SECRET_KEY)
-    try:
-        return s.loads(token, max_age=3600)  # válido por 1 hora
-    except SignatureExpired:
-        print("⚠️ Token expirado")
-        return None
-    except BadSignature:
-        print("❌ Token inválido")
-        return None
 
 

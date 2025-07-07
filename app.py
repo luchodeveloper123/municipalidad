@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, send_file, url_for, session, Request, Response
+from tokens import generar_token
+from tokens import decodificar_token
 from collections import Counter
 from io import BytesIO
 import re
@@ -232,9 +234,10 @@ def verificar_email():
         cursor.execute("UPDATE usuarios SET verificado = 1 WHERE id = ?", (user_id,))
         conn.commit()
         conn.close()
-        return render_template('verificado.html')  # Página que veremos en el navegador
+        return render_template('verificado.html')  # ✅ Verificación exitosa
     else:
-        return "Token inválido o expirado", 400
+        # Mostrar página de error elegante, no solo texto plano
+        return render_template('verificar.html', error="El enlace es inválido o ya expiró.")
 
 
 # -------------------- AUTENTICACIÓN --------------------
@@ -287,7 +290,11 @@ def register():
         if registrar_usuario(username, password, rol):
             user_id = obtener_usuario_id(username)
             token = generar_token(user_id)
+
+            # Construir enlace
             link = f"https://municipalidad-production.up.railway.app/verificar-email?token={token}"
+            # O si usás config:
+            # link = f"{APP_URL}/verificar-email?token={token}"
 
             if enviar_correo_verificacion(username, link):
                 return render_template('register.html', error="✅ Cuenta creada. Revisá tu correo para activarla.")
@@ -297,10 +304,6 @@ def register():
             return render_template('register.html', error="Ese correo ya está registrado")
 
     return render_template('register.html')
-
-
-
-
 
 @app.route('/logout')
 def logout():
