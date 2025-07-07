@@ -3,14 +3,17 @@ from datetime import datetime, timedelta
 from collections import defaultdict
 from typing import List, Dict
 import pandas as pd
+from app import app
 from functools import wraps
 from flask import session, redirect
 import base64
+from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
 import smtplib
 from email.mime.text import MIMEText
 import os
 
 # -------------------- CONEXIÓN --------------------
+CLAVE_SECRETA = "clave_super_segura_municipalidad"
 
 def conectar_db():
     db_path = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
@@ -683,10 +686,19 @@ def buscar_arreglos_realizados_por_plaza(nombre_plaza=None, anio=None, mes=None)
         } for r in resultados]
 
 def generar_token(usuario_id):
-    return base64.urlsafe_b64encode(str(usuario_id).encode()).decode()
+    s = URLSafeTimedSerializer(app.secret_key)
+    return s.dumps(usuario_id)
+
 
 def decodificar_token(token):
+    s = URLSafeTimedSerializer(app.secret_key)
     try:
-        return int(base64.urlsafe_b64decode(token.encode()).decode())
-    except Exception:
+        return s.loads(token, max_age=3600)  # válido por 1 hora
+    except SignatureExpired:
+        print("⚠️ Token expirado")
         return None
+    except BadSignature:
+        print("❌ Token inválido")
+        return None
+
+
