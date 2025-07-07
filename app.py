@@ -644,17 +644,19 @@ def descargar_arreglos_excel():
 
 @app.route('/')
 def inicio():
-    if 'usuario_id' not in session:
+    usuario_id = session.get('usuario_id')
+    if not usuario_id:
         return redirect('/login')
 
-    alertas_cortes = plazas_sin_corte(session['usuario_id'])
-    alertas_arreglos = obtener_arreglos_con_alerta(session['usuario_id'])
+    alertas_cortes = plazas_sin_corte(usuario_id)
+    alertas_arreglos = obtener_arreglos_con_alerta(usuario_id)
 
     return render_template(
         'index.html',
         alertas_cortes=alertas_cortes,
         alertas_arreglos=alertas_arreglos
     )
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
