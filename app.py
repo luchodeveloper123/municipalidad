@@ -242,6 +242,8 @@ def login():
                 return "Rol no reconocido", 403
         else:
             return render_template('login.html', error="Credenciales incorrectas.")
+        
+    return render_template('login.html')
     
 
 
@@ -270,6 +272,9 @@ def register():
             return render_template('register.html', success="✅ Cuenta creada correctamente. Ya podés iniciar sesión.")
         else:
             return render_template('register.html', error="Ese correo ya está registrado")
+        
+    return render_template('register.html')
+
 
 
 
