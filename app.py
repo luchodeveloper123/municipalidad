@@ -235,13 +235,12 @@ def login():
         if user:
             session['usuario'] = user['username']
             session['rol'] = user['rol']
-
-            return redirect(url_for('inicio'))  # 👈 Redirige a la función que muestra el index
+            session['usuario_id'] = obtener_usuario_id(user['username'])  # 🧠 ¡Esta línea es clave!
+            return redirect(url_for('inicio'))
         else:
             return render_template('login.html', error="Credenciales incorrectas.")
         
     return render_template('login.html')
-
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
