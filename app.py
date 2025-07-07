@@ -42,7 +42,7 @@ from proyecto import (
 )
 
 app = Flask(__name__)
-app.secret_key = SECRET_KEY
+app.secret_key = os.environ.get('SECRET_KEY', 'clave_super_segura_municipalidad')
 
 crear_base_de_datos()
 actualizar_tabla_plazas_agregar_fecha_creacion()
