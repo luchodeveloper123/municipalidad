@@ -768,7 +768,6 @@ def descargar_arreglos_excel():
 
 
 @app.route('/')
-@solo_servicios
 def inicio():
     usuario_id = session.get('usuario_id')
     rol = session.get('rol')
