@@ -408,11 +408,16 @@ def login():
             session['usuario'] = user['username']
             session['rol'] = user['rol']
             session['usuario_id'] = obtener_usuario_id(user['username'])  # 🧠 ¡Esta línea es clave!
-            return redirect(url_for('inicio'))
-        else:
-            return render_template('login.html', error="Credenciales incorrectas.")
-        
+
+            if user['rol'] == 'servicios':
+                return redirect(url_for('inicio'))
+            elif user['rol'] == 'secretaria':
+                return redirect(url_for('registrar_arreglo'))
+
+        return render_template('login.html', error="Credenciales incorrectas.")
+
     return render_template('login.html')
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -763,9 +768,13 @@ def descargar_arreglos_excel():
 
 
 @app.route('/')
-@solo_servicios
 def inicio():
     usuario_id = session.get('usuario_id')
+    rol = session.get('rol')
+
+    # Si no hay sesión o el rol no es servicios, redirigir al login
+    if not usuario_id or rol != 'servicios':
+        return redirect('/login')
 
     # Detectar cortes vencidos (15 días)
     alertas_cortes = cortes_vencidos(usuario_id)
@@ -780,8 +789,9 @@ def inicio():
         'index.html',
         alertas_cortes=alertas_cortes,
         alertas_arreglos=alertas_arreglos,
-        plazas_sin_corte=plazas_sin_corte  # ✅ nuevo dato para mostrar en el inicio
+        plazas_sin_corte=plazas_sin_corte
     )
+
 
 
 
