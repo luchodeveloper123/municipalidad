@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Plazas Cortadas</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+  <style>
+    .cuadro-cortes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1em;
+      margin-top: 1.5em;
+    }
+
+    .tarjeta-corte {
+      background-color: #f0f8ff;
+      border: 1px solid #bcd;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .tarjeta-corte h4 {
+      margin: 0;
+      font-size: 1.1em;
+      color: #2b4d66;
+    }
+
+    .info-item {
+      margin: 0;
+      font-size: 0.95em;
+      color: #333;
+    }
+
+    .info-fecha {
+      margin: 0;
+      font-size: 0.9em;
+      color: #555;
+    }
+
+    .btn-global-download {
+      background-color: #3498db;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 0.95em;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .btn-global-download:hover {
+      background-color: #2980b9;
+    }
+  </style>
+</head>
+<body>
+<div class="fondo-institucional-fija"></div>
+<div class="layout">
+  <div class="menu-lateral">
+    <div>
+      <h2>🌿 Mantenimiento de Plazas</h2>
+      {% if session['rol'] == 'servicios' %}
+        <button onclick="window.location.href='/'">🏠 Inicio</button>
+        <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+        <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+        <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+        <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+        <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+        <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
+        <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+        <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+      {% elif session['rol'] == 'secretaria' %}
+        <button onclick="window.location.href='/'">🏠 Inicio</button>
+        <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+        <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+        <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      {% endif %}
+    </div>
+    <a href="/logout"
+       style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+      🚪 Cerrar sesión
+    </a>
+  </div>
+
+  <div class="contenido-principal">
+    <div class="contenedor-arreglos-realizados">
+      <h1>✂️ Plazas Cortadas</h1>
+
+      <form method="GET" action="{{ url_for('plazas_cortadas_view') }}" class="filtro-mensual" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.5em; max-width: 300px; margin-bottom: 1em;">
+        <label for="mes">📅 Mes:</label>
+        <input type="month" id="mes" name="mes" value="{{ mes or '' }}" style="width: 100%; padding: 6px;">
+        <button type="submit" style="padding: 6px 12px;">🔍 Filtrar</button>
+      </form>
+
+      {% if cortes_agrupados %}
+        <div class="cuadro-cortes">
+          {% for nombre, lista in cortes_agrupados.items() %}
+            <div class="tarjeta-corte">
+              <h4>{{ nombre }}</h4>
+              <p class="info-item">📍 Ubicación: {{ lista[0].ubicacion or 'Sin datos' }}</p>
+              <p class="info-item">📅 Fechas de corte:</p>
+              <ul style="margin: 0; padding-left: 1em;">
+                {% for corte in lista %}
+                  <li class="info-fecha">✂️ {{ corte.fecha_corte }}</li>
+                {% endfor %}
+              </ul>
+            </div>
+          {% endfor %}
+        </div>
+
+        <div style="text-align: center; margin-top: 2em;">
+          <form method="GET" action="{{ url_for('descargar_cortes') }}">
+            <input type="hidden" name="mes" value="{{ mes or '' }}">
+            <button type="submit" class="btn-global-download">📥 Descargar cortes en Excel</button>
+          </form>
+        </div>
+      {% else %}
+        <p style="margin-top: 2em; font-style: italic; color: gray;">
+          No hay cortes registrados para los filtros seleccionados.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<img src="/static/logo.jpg" alt="Logo Municipalidad Tres de Febrero" class="logo-institucional-fijo">
+</body>
+</html>

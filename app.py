@@ -1,16 +1,20 @@
-from flask import Flask, render_template, request, redirect, session, send_file, url_for, session, Request, Response
+from flask import Flask, render_template, request, redirect, session, send_file, url_for, session, Request, Response, make_response
 from collections import Counter
+from datetime import datetime
+from datetime import timedelta
 from io import BytesIO
 import re
 import os
+from collections import defaultdict
 from config import SECRET_KEY
 import io, sqlite3, csv
 import pandas as pd
 import base64
-from datetime import datetime
 from proyecto import (
     crear_base_de_datos,
     agregar_plaza,
+    obtener_arreglos_pendientes,
+    dias_desde_ultimo_corte,
     registrar_corte,
     plazas_sin_corte,
     registrar_usuario,
@@ -25,12 +29,12 @@ from proyecto import (
     exportar_cortes_a_excel,
     obtener_cortes_por_plaza,
     buscar_arreglos_por_plaza,
+    cortes_vencidos,
     ignorar_alerta,
     eliminar_plaza,
     eliminar_corte,
     eliminar_arreglo,
     actualizar_tabla_plazas_agregar_fecha_creacion,
-    obtener_arreglos_pendientes,
     registrar_solicitud_arreglo,
     marcar_tarea_realizada,
     obtener_arreglos_realizados,
@@ -39,7 +43,23 @@ from proyecto import (
     obtener_arreglos_con_alerta,
     omitir_alerta_arreglo,
     obtener_fechas_por_plaza
+    
 )
+
+def migrar_alertas_ignoradas_agregar_nombre():
+    conn = conectar_db()
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA table_info(alertas_ignoradas)")
+    columnas = [col[1] for col in cursor.fetchall()]
+    if "nombre" not in columnas:
+        print("🛠 Agregando columna 'nombre' a alertas_ignoradas...")
+        cursor.execute("ALTER TABLE alertas_ignoradas ADD COLUMN nombre TEXT")
+        conn.commit()
+    else:
+        print("✅ La columna 'nombre' ya existe en alertas_ignoradas.")
+
+    conn.close()
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'clave_super_segura_municipalidad')
@@ -47,28 +67,94 @@ app.secret_key = os.environ.get('SECRET_KEY', 'clave_super_segura_municipalidad'
 crear_base_de_datos()
 actualizar_tabla_plazas_agregar_fecha_creacion()
 migrar_tabla_arreglos_a_tareas_individuales()
+migrar_alertas_ignoradas_agregar_nombre()
+
 
 # -------------------- PLAZAS --------------------
 
 @app.route('/nueva-plaza', methods=['GET', 'POST'])
 @solo_servicios
 def nueva_plaza():
-    if 'usuario_id' not in session:
-        return redirect('/login')
-
     mensaje = None
 
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        ubicacion = request.form['ubicacion']
-        usuario_id = session['usuario_id']
-        agregar_plaza(nombre, ubicacion, usuario_id)
-        return redirect('/nueva-plaza?creada=1')
+        nombre = request.form.get('nombre', '').strip()
+        ubicacion = request.form.get('ubicacion', '').strip()
+        usuario_id = session.get('usuario_id')
 
-    if request.args.get('creada') == '1':
-        mensaje = "✅ Plaza registrada con éxito."
+        print("📥 Intentando registrar plaza:")
+        print("🔹 Nombre:", nombre)
+        print("🔹 Ubicación:", ubicacion)
+        print("🔹 Usuario ID:", usuario_id)
+
+        try:
+            if not nombre or not ubicacion or not usuario_id:
+                raise ValueError("Campos incompletos o sesión inválida")
+
+            conn = conectar_db()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO plazas (nombre, ubicacion, usuario_id, activa)
+                VALUES (?, ?, ?, 1)
+            ''', (nombre, ubicacion, usuario_id))
+
+            conn.commit()
+            conn.close()
+
+            print("✅ Plaza registrada correctamente.")
+            return redirect('/nueva-plaza?registrado=1')
+
+        except Exception as e:
+            print("⚠️ Error al registrar plaza:", e)
+            mensaje = "❌ Error interno al registrar la plaza. Verificá los datos o la sesión."
+
+    if request.args.get('registrado') == '1':
+        mensaje = "✅ Plaza registrada correctamente."
 
     return render_template('nueva_plaza.html', mensaje=mensaje)
+
+
+@app.route('/posponer-alerta', methods=['POST'])
+def posponer_alerta():
+    from datetime import datetime, timedelta
+    try:
+        nombre = request.form['nombre']
+        tipo_alerta = request.form['tipo_alerta']
+        usuario_id = session.get('usuario_id')
+        ignorar_hasta = (datetime.today() + timedelta(days=3)).strftime('%Y-%m-%d')
+
+        conn = conectar_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        # Buscar plaza_id por nombre
+        cursor.execute("SELECT id FROM plazas WHERE LOWER(nombre) = ?", (nombre.lower(),))
+        resultado = cursor.fetchone()
+
+        if resultado:
+            plaza_id = resultado['id']
+            cursor.execute('''
+                INSERT INTO alertas_ignoradas (usuario_id, plaza_id, tipo_alerta, ignorar_hasta)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(usuario_id, tipo_alerta, plaza_id, nombre_plaza)
+                DO UPDATE SET ignorar_hasta = excluded.ignorar_hasta
+            ''', (usuario_id, plaza_id, tipo_alerta, ignorar_hasta))
+        else:
+            # Si no hay plaza registrada, ignorar por nombre
+            cursor.execute('''
+                INSERT INTO alertas_ignoradas (usuario_id, plaza_id, nombre_plaza, tipo_alerta, ignorar_hasta)
+                VALUES (?, NULL, ?, ?, ?)
+                ON CONFLICT(usuario_id, tipo_alerta, plaza_id, nombre_plaza)
+                DO UPDATE SET ignorar_hasta = excluded.ignorar_hasta
+            ''', (usuario_id, nombre, tipo_alerta, ignorar_hasta))
+
+        conn.commit()
+        conn.close()
+        return redirect('/')
+    except Exception as e:
+        print(f"⚠️ Error al posponer alerta: {e}")
+        return "Error interno", 500
 
 
 # -------------------- CORTES --------------------
@@ -76,16 +162,34 @@ def nueva_plaza():
 @app.route('/registrar-corte', methods=['GET', 'POST'])
 @solo_servicios
 def registrar_corte_view():
-    if 'usuario_id' not in session:
-        return redirect('/login')
-
     mensaje = None
 
     if request.method == 'POST':
-        nombre = request.form['nombre']
-        fecha = request.form['fecha']
-        registrar_corte(nombre, fecha)
-        return redirect('/registrar-corte?registrado=1')
+        try:
+            nombre = request.form['nombre'].strip()
+            ubicacion = request.form['ubicacion'].strip()
+            tipo = request.form['tipo'].strip()
+            fecha = request.form['fecha'].strip()
+
+            if not nombre or not tipo or not fecha:
+                mensaje = "❌ Todos los campos son obligatorios."
+                raise ValueError("Campos incompletos")
+
+            conn = conectar_db()
+            cursor = conn.cursor()
+
+            cursor.execute('''
+                INSERT INTO cortes (nombre, ubicacion, tipo, fecha_corte)
+                VALUES (?, ?, ?, ?)
+            ''', (nombre, ubicacion, tipo, fecha))
+
+            conn.commit()
+            conn.close()
+            return redirect('/registrar-corte?registrado=1')
+
+        except Exception as e:
+            print("⚠️ Error al registrar corte:", e)
+            mensaje = "❌ Error interno al registrar el corte."
 
     if request.args.get('registrado') == '1':
         mensaje = "✅ Corte registrado correctamente."
@@ -114,19 +218,118 @@ def registrar_arreglo_view():
 
     return render_template('registrar_arreglo.html', mensaje=mensaje)
 
+def formatear_fecha(fecha_str):
+    fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
+    meses = {
+        1: "enero", 2: "febrero", 3: "marzo", 4: "abril",
+        5: "mayo", 6: "junio", 7: "julio", 8: "agosto",
+        9: "septiembre", 10: "octubre", 11: "noviembre", 12: "diciembre"
+    }
+    return f"{fecha.day} de {meses[fecha.month]} de {fecha.year}"
 
-@app.route('/arreglos-pendientes', methods=['GET', 'POST'])
+@app.route('/plazas-cortadas')
+def plazas_cortadas_view():
+    conn = conectar_db()
+    cursor = conn.cursor()
+
+    mes = request.args.get('mes')  # formato '2025-09'
+    query = '''
+        SELECT nombre, ubicacion, fecha_corte
+        FROM cortes
+        WHERE tipo = 'plaza'
+    '''
+    params = []
+
+    if mes:
+        query += " AND strftime('%Y-%m', fecha_corte) = ?"
+        params.append(mes)
+
+    query += " ORDER BY nombre, fecha_corte DESC"
+
+    cursor.execute(query, params)
+    cortes_raw = cursor.fetchall()
+    conn.close()
+
+    # Agrupar por nombre
+    agrupados = defaultdict(list)
+    for nombre, ubicacion, fecha in cortes_raw:
+        agrupados[nombre].append({
+            'ubicacion': ubicacion,
+            'fecha_corte': fecha_corta(fecha)
+        })
+
+    return render_template('plazas_cortadas.html', cortes_agrupados=agrupados, mes=mes)
+
+
+
+def fecha_corta(fecha_str):
+    try:
+        fecha = datetime.strptime(fecha_str, "%Y-%m-%d")
+        return fecha.strftime("%d/%m/%Y")
+    except Exception:
+        return fecha_str
+
+
+@app.route('/descargar-cortes')
+def descargar_cortes():
+    mes = request.args.get('mes')  # formato '2025-09'
+    conn = conectar_db()
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT nombre, ubicacion, fecha_corte
+        FROM cortes
+        WHERE tipo = 'plaza'
+    '''
+    params = []
+
+    if mes:
+        query += " AND strftime('%Y-%m', fecha_corte) = ?"
+        params.append(mes)
+
+    query += " ORDER BY nombre, fecha_corte DESC"
+
+    cursor.execute(query, params)
+    cortes_raw = cursor.fetchall()
+    conn.close()
+
+    # Agrupar por nombre
+    from collections import defaultdict
+    agrupados = defaultdict(list)
+    for nombre, ubicacion, fecha in cortes_raw:
+        agrupados[nombre].append({
+            'ubicacion': ubicacion,
+            'fecha': fecha_corta(fecha)
+        })
+
+    # Preparar datos para Excel
+    filas = []
+    for nombre, lista in agrupados.items():
+        fechas = ', '.join([c['fecha'] for c in lista])
+        ubicacion = lista[0]['ubicacion']
+        filas.append({
+            'Plaza': nombre,
+            'Ubicación': ubicacion,
+            'Fechas de corte': fechas
+        })
+
+    df = pd.DataFrame(filas)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Cortes')
+    output.seek(0)
+
+    nombre_archivo = f'cortes_plaza_{mes or "completo"}.xlsx'
+    return send_file(output, download_name=nombre_archivo, as_attachment=True)
+
+
+
+
+@app.route('/arreglos-pendientes')
 def arreglos_pendientes():
-    # Obtener filtros del formulario o parámetros
-    mes_anio = request.args.get('mes_anio', '').strip()
-    plaza_filtro = request.args.get('plaza', '').strip().lower()
+    mes_anio = request.args.get('mes_anio', '')
+    plaza = request.args.get('plaza', '')
 
-    # Verificar si se debe mostrar mensaje de éxito
-    mensaje = None
-    if request.args.get('hecho') == '1':
-        mensaje = "✅ Arreglo marcado como finalizado."
-
-    # Validar mes y año, o usar fecha actual
     if mes_anio and '-' in mes_anio:
         anio, mes = mes_anio.split('-')
     else:
@@ -134,44 +337,13 @@ def arreglos_pendientes():
         anio, mes = str(hoy.year), f"{hoy.month:02d}"
         mes_anio = f"{anio}-{mes}"
 
-    # Conectar a la base
-    conn = sqlite3.connect('database.db')  # Asegurate de usar el nombre real de tu base
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    arreglos = obtener_arreglos_pendientes(anio, mes, plaza)
 
-    # Consulta de arreglos pendientes filtrados
-    query = '''
-        SELECT a.id,
-               a.tarea AS descripcion,
-               a.relevadores,
-               strftime('%d/%m/%Y', a.fecha_ingreso) AS fecha_ingreso,
-               p.nombre AS plaza
-        FROM arreglos a
-        JOIN plazas p ON a.plaza_id = p.id
-        WHERE a.realizada = 0
-          AND strftime('%Y-%m', a.fecha_ingreso) = ?
-          AND LOWER(p.nombre) LIKE ?
-        ORDER BY a.fecha_ingreso DESC
-    '''
-    cursor.execute(query, (mes_anio, f'%{plaza_filtro}%'))
-    arreglos = cursor.fetchall()
+    return render_template('arreglos_pendientes.html',
+                           arreglos=arreglos,
+                           mes_anio=mes_anio,
+                           plaza=plaza)
 
-    # Lista de plazas (por si las usás en filtros)
-    cursor.execute('SELECT id, nombre FROM plazas ORDER BY nombre')
-    plazas = cursor.fetchall()
-
-    conn.close()
-
-    return render_template(
-        'arreglos_pendientes.html',
-        arreglos=arreglos,
-        mes_anio=mes_anio,
-        anio=anio,
-        mes=mes,
-        plazas=plazas,
-        plaza=plaza_filtro,
-        mensaje=mensaje
-    )
 
 # -------------------- ARREGLOS (actualización de tareas) --------------------
 
@@ -288,83 +460,28 @@ def mis_plazas():
     if 'usuario_id' not in session:
         return redirect('/login')
 
-    texto = ''
-    mes_anio = ''
-    mes = anio = None
+    texto = request.form.get('busqueda', '').strip() if request.method == 'POST' else ''
+    usuario_id = session['usuario_id']
 
-    # Captura de filtros
-    if request.method == 'POST':
-        texto = request.form.get('busqueda', '').strip()
-        mes_anio = request.form.get('mes_anio')
-
-    # Parsear mes y año
-    if mes_anio:
-        try:
-            anio, mes = map(int, mes_anio.split('-'))
-        except ValueError:
-            mes = anio = None
-
-    # Traer todas las plazas según búsqueda
-    raw = buscar_plazas_por_nombre(texto)
-    if raw and isinstance(raw[0], dict):
-        resultados = [(r['id'], r['nombre'], r['ubicacion']) for r in raw]
+    conn = conectar_db()
+    cursor = conn.cursor()
+    if texto:
+        cursor.execute('''
+            SELECT id, nombre, ubicacion
+            FROM plazas
+            WHERE usuario_id = ? AND activa = 1 AND nombre LIKE ?
+        ''', (usuario_id, f'%{texto}%'))
     else:
-        resultados = raw
+        cursor.execute('''
+            SELECT id, nombre, ubicacion
+            FROM plazas
+            WHERE usuario_id = ? AND activa = 1
+        ''', (usuario_id,))
+    plazas = cursor.fetchall()
+    conn.close()
 
-    # Desduplicar por ID de plaza
-    plazas = []
-    vistos = set()
-    for pid, nombre, ubicacion in resultados:
-        if pid not in vistos:
-            vistos.add(pid)
-            plazas.append((pid, nombre, ubicacion))
+    return render_template('mis_plazas.html', plazas=plazas, texto=texto)
 
-    # Obtener cortes filtrados por mes/año
-    historial = historial_cortes_por_plaza(mes=mes, anio=anio)
-    plaza_ids = {pid for pid, _, _ in plazas}
-    historial_filtrado = {
-        pid: datos
-        for pid, datos in historial.items()
-        if pid in plaza_ids
-    }
-
-    # Exportar a Excel si se solicitó
-    if request.method == 'POST' and request.form.get('descargar') == 'excel':
-        filas = []
-        for pid, nombre, ubicacion in plazas:
-            fechas = historial_filtrado.get(pid, {}).get('fechas', [])
-            dias = len(fechas)
-            fechas_str = ', '.join(f['fecha'] for f in fechas)
-
-            filas.append({
-                'Plaza': nombre,
-                'Ubicación': ubicacion,
-                'Días de Corte': dias,
-                'Fechas': fechas_str
-            })
-
-        df = pd.DataFrame(filas)
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Cortes')
-        output.seek(0)
-
-        filename = f'cortes_{mes or "todos"}-{anio or "año"}.xlsx'
-        return send_file(
-            output,
-            download_name=filename,
-            as_attachment=True,
-            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        )
-
-    # Renderizar la plantilla con todas las plazas y los cortes del período
-    return render_template(
-        'mis_plazas.html',
-        plazas=plazas,
-        historial=historial_filtrado,
-        texto=texto,
-        mes_anio=mes_anio
-    )
 
 # -------------------- EXPORTACIÓN DE DATOS --------------------
 
@@ -483,31 +600,34 @@ def ver_grafico():
         except ValueError:
             mes = anio = None
 
-    # Traigo todos los cortes de ese mes/año
-    historial = historial_cortes_por_plaza(mes=mes, anio=anio)
-    # historial = { plaza_id: { 'plaza':nombre, 'fechas':[...], ... }, ... }
+    # Traigo todos los cortes de ese mes/año agrupados por nombre
+    conn = conectar_db()
+    cursor = conn.cursor()
 
-    # Construyo conteo de cortes por plaza
-    cortes_por_plaza = {
-        datos['plaza']: len(datos.get('fechas', []))
-        for datos in historial.values()
-    }
-    # Elimino las que quedaron en 0 y ordeno de mayor a menor
-    etiquetas, valores = zip(
-        *sorted(
-            ((plaza, cnt) for plaza, cnt in cortes_por_plaza.items() if cnt>0),
-            key=lambda x: x[1],
-            reverse=True
-        )
-    ) if cortes_por_plaza else ([],[])
+    query = '''
+        SELECT nombre, COUNT(*) as cantidad
+        FROM cortes
+    '''
+    params = []
+
+    if mes and anio:
+        query += ' WHERE strftime("%m", fecha_corte) = ? AND strftime("%Y", fecha_corte) = ?'
+        params = [f"{mes:02d}", str(anio)]
+
+    query += ' GROUP BY nombre ORDER BY cantidad DESC'
+
+    cursor.execute(query, params)
+    resultados = cursor.fetchall()
+    conn.close()
+
+    # Genero lista combinada [(nombre, cantidad), ...]
+    combinado = [(fila[0], fila[1]) for fila in resultados]
 
     return render_template(
         'grafico.html',
-        labels=list(etiquetas),
-        data=list(valores),
+        combinado=combinado,
         mes_anio=mes_anio
     )
-
 
 # -------------------- ALERTAS --------------------
 
@@ -643,19 +763,27 @@ def descargar_arreglos_excel():
 
 
 @app.route('/')
+@solo_servicios
 def inicio():
     usuario_id = session.get('usuario_id')
-    if not usuario_id:
-        return redirect('/login')
 
-    alertas_cortes = plazas_sin_corte(usuario_id)
+    # Detectar cortes vencidos (15 días)
+    alertas_cortes = cortes_vencidos(usuario_id)
+
+    # Detectar arreglos pendientes (más de 13 días)
     alertas_arreglos = obtener_arreglos_con_alerta(usuario_id)
+
+    # Días desde el último corte por plaza
+    plazas_sin_corte = dias_desde_ultimo_corte()
 
     return render_template(
         'index.html',
         alertas_cortes=alertas_cortes,
-        alertas_arreglos=alertas_arreglos
+        alertas_arreglos=alertas_arreglos,
+        plazas_sin_corte=plazas_sin_corte  # ✅ nuevo dato para mostrar en el inicio
     )
+
+
 
 
 if __name__ == "__main__":

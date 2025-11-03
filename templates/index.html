@@ -5,86 +5,78 @@
   <title>Servicios Urbanos</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
+  <style> .cuadro-central { background-color: white; border-radius: 10px; padding: 25px; margin: 30px auto; max-width: 800px; box-shadow: 0 0 12px rgba(0,0,0,0.1); } </style>
 </head>
 <body>
   <div class="fondo-institucional-fija"></div>
   <div class="layout">
-<div class="menu-lateral">
-  <div>
-    <h2>🌿 Mantenimiento de Plazas</h2>
+    <div class="menu-lateral">
+      <div>
+        <h2>🌿 Mantenimiento de Plazas</h2>
 
-    {% if session['rol'] == 'servicios' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
-      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
-      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+        {% if session['rol'] == 'servicios' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+          <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+          <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
+          <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+          <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+        {% elif session['rol'] == 'secretaria' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+        {% endif %}
+      </div>
 
-    {% elif session['rol'] == 'secretaria' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-    {% endif %}
-
-  </div>
-
-  <a href="/logout"
-     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
-    🚪 Cerrar sesión
-  </a>
-</div>
-
-
+      <a href="/logout"
+         style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+        🚪 Cerrar sesión
+      </a>
+    </div>
 
     <div class="contenido-principal">
+      <div class="cuadro-central">
 
-      {% if alertas_cortes %}
-      <div id="alertaModal" class="modal-alerta">
-        <div class="modal-contenido">
-          <span class="cerrar" onclick="cerrarModal('alertaModal')">&times;</span>
-          <h3>🚨 Plazas sin corte reciente</h3>
+        {% if alertas_cortes %}
+          <h3>📢 Lugares que necesitan corte nuevamente</h3>
           <ul>
             {% for alerta in alertas_cortes %}
-            <li>
-              {{ alerta.mensaje }}
-              <form method="POST" action="{{ url_for('ignorar_alerta_route') }}">
-                <input type="hidden" name="plaza_id" value="{{ alerta.plaza_id }}">
-                <input type="hidden" name="tipo_alerta" value="corte">
-                <button type="submit">Omitir durante 7 días</button>
-              </form>
-            </li>
+              <li>
+                <strong>{{ alerta.nombre }}</strong> – Último corte: {{ alerta.ultima_fecha }} ({{ alerta.dias }} días sin corte)
+                <form method="POST" action="/posponer-alerta" style="display:inline;">
+                  <input type="hidden" name="nombre" value="{{ alerta.nombre }}">
+                  <input type="hidden" name="tipo_alerta" value="corte">
+                  <button type="submit">📅 Posponer 3 días</button>
+                </form>
+              </li>
             {% endfor %}
           </ul>
-        </div>
-      </div>
-      {% endif %}
+        {% else %}
+          <p>✅ No hay cortes vencidos por ahora.</p>
+        {% endif %}
 
-      {% if alertas_arreglos %}
-      <div id="alertaModalArreglos" class="modal-alerta">
-        <div class="modal-contenido">
-          <span class="cerrar" onclick="cerrarModal('alertaModalArreglos')">&times;</span>
+        {% if alertas_arreglos %}
           <h3>🛠 Arreglos pendientes hace más de 13 días</h3>
           <ul>
             {% for alerta in alertas_arreglos %}
-            <li>
-              ⚠️ La plaza {{ alerta.nombre }} tiene pendiente el arreglo "{{ alerta.tarea }}" desde hace {{ alerta.dias }} días.
-              <form method="POST" action="{{ url_for('ignorar_alerta_route') }}">
-                <input type="hidden" name="plaza_id" value="{{ alerta.plaza_id }}">
-                <input type="hidden" name="tipo_alerta" value="arreglo">
-                <input type="hidden" name="arreglo_id" value="{{ alerta.id }}">
-                <button type="submit">Omitir durante 7 días</button>
-              </form>
-            </li>
+              <li>
+                ⚠️ La plaza {{ alerta.nombre }} tiene pendiente el arreglo "{{ alerta.tarea }}" desde hace {{ alerta.dias }} días.
+                <form method="POST" action="{{ url_for('ignorar_alerta_route') }}">
+                  <input type="hidden" name="plaza_id" value="{{ alerta.plaza_id }}">
+                  <input type="hidden" name="tipo_alerta" value="arreglo">
+                  <input type="hidden" name="arreglo_id" value="{{ alerta.id }}">
+                  <button type="submit">Omitir durante 7 días</button>
+                </form>
+              </li>
             {% endfor %}
           </ul>
-        </div>
-      </div>
-      {% endif %}
+        {% endif %}
 
+      </div>
     </div>
   </div>
 

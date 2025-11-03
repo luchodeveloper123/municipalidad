@@ -21,6 +21,7 @@
       <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
       <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
       <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
       <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
       <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
 
@@ -50,15 +51,24 @@
   </div>
 {% endif %}
 
-        <form method="POST" action="/registrar-corte">
-          <label for="nombre">Nombre de la plaza:</label>
-          <input type="text" name="nombre" id="nombre" placeholder="Ej: Plaza 1 de Mayo" required>
+<form method="POST" action="/registrar-corte">
+  <label for="nombre">📍 Nombre del lugar:</label>
+  <input type="text" name="nombre" id="nombre" required placeholder="Ej: Boulevard Mitre">
 
-          <label for="fecha">Fecha del corte:</label>
-          <input type="date" name="fecha" id="fecha" required>
+  <label for="ubicacion">📌 Ubicación del lugar:</label>
+  <input type="text" name="ubicacion" id="ubicacion" required placeholder="Ej: frente a estación Mitre">
 
-          <button type="submit" class="boton">Registrar Corte</button>
-        </form>
+  <label for="tipo">🏷 Tipo de lugar:</label>
+  <select name="tipo" id="tipo" required>
+    <option value="plaza">Plaza</option>
+  </select>
+
+  <label for="fecha">📅 Fecha del corte:</label>
+  <input type="date" name="fecha" id="fecha" required>
+
+  <button type="submit" class="boton">Registrar Corte</button>
+</form>
+
       </div>
     </div>
   </div>

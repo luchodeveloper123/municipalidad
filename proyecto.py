@@ -36,26 +36,24 @@ def crear_base_de_datos():
             rol TEXT NOT NULL
         )
     ''')
-
-
-
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS plazas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL,
             ubicacion TEXT,
-            usuario_id INTEGER NOT NULL,
-            fecha_creacion DATE DEFAULT CURRENT_DATE,
-            FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+            usuario_id INTEGER,
+            activa BOOLEAN DEFAULT 1
         )
     ''')
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS cortes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            plaza INTEGER NOT NULL,
-            fecha_corte DATE NOT NULL,
-            FOREIGN KEY (plaza) REFERENCES plazas(id)
+            nombre TEXT NOT NULL,
+            ubicacion TEXT,
+            tipo TEXT CHECK(tipo IN ('plaza', 'vereda', 'parque', 'otro')),
+            fecha_corte DATE NOT NULL
         )
     ''')
 
@@ -77,14 +75,16 @@ def crear_base_de_datos():
         CREATE TABLE IF NOT EXISTS alertas_ignoradas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER NOT NULL,
-            plaza_id INTEGER NOT NULL,
+            plaza_id INTEGER,  -- puede ser NULL si no está registrada
+            nombre_plaza TEXT, -- usado si no hay plaza_id
             tipo_alerta TEXT NOT NULL,
             ignorar_hasta DATE NOT NULL,
             FOREIGN KEY (usuario_id) REFERENCES usuarios(id),
             FOREIGN KEY (plaza_id) REFERENCES plazas(id),
-            UNIQUE(usuario_id, plaza_id, tipo_alerta)
+            UNIQUE(usuario_id, tipo_alerta, plaza_id, nombre_plaza)
         )
     ''')
+
 
     conn.commit()
     conn.close()
@@ -158,14 +158,27 @@ def solo_servicios(f):
 # -------------------- PLAZAS --------------------
 
 def agregar_plaza(nombre, ubicacion, usuario_id):
-    conn = conectar_db()
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO plazas (nombre, ubicacion, usuario_id) VALUES (?, ?, ?)",
-        (nombre, ubicacion, usuario_id)
-    )
-    conn.commit()
-    conn.close()
+    try:
+        conn = conectar_db()
+        cursor = conn.cursor()
+
+        # Validación básica
+        if not nombre or not ubicacion or not usuario_id:
+            raise ValueError("Campos incompletos para registrar plaza")
+
+        cursor.execute(
+            "INSERT INTO plazas (nombre, ubicacion, usuario_id, activa) VALUES (?, ?, ?, 1)",
+            (nombre.strip(), ubicacion.strip(), usuario_id)
+        )
+        conn.commit()
+        conn.close()
+        print(f"✅ Plaza registrada: {nombre} – {ubicacion}")
+        return True
+
+    except Exception as e:
+        print(f"⚠️ Error al registrar plaza: {e}")
+        return False
+
 
 def obtener_plazas():
     conn = conectar_db()
@@ -175,7 +188,7 @@ def obtener_plazas():
     conn.close()
     return plazas
 
-def buscar_plazas_por_nombre(texto: str) -> List[Dict]:
+def buscar_plazas_por_nombre(texto: str):
     conn = conectar_db()
     cursor = conn.cursor()
     cursor.execute(
@@ -184,16 +197,17 @@ def buscar_plazas_por_nombre(texto: str) -> List[Dict]:
     )
     resultados = cursor.fetchall()
     conn.close()
-    return [{'id': r[0], 'nombre': r[1], 'ubicacion': r[2]} for r in resultados]
+    return resultados
+
 
 def eliminar_plaza(plaza_id: int):
     conn = conectar_db()
     cursor = conn.cursor()
     cursor.execute("DELETE FROM arreglos WHERE plaza_id = ?", (plaza_id,))
-    cursor.execute("DELETE FROM cortes WHERE plaza = ?", (plaza_id,))
     cursor.execute("DELETE FROM plazas WHERE id = ?", (plaza_id,))
     conn.commit()
     conn.close()
+
 
 def obtener_nombres_plaza():
     conn = conectar_db()
@@ -217,15 +231,11 @@ def buscar_arreglos_por_plaza(nombre):
 
 # -------------------- CORTES --------------------
 
-def registrar_corte(nombre_plaza, fecha):
+def registrar_corte(lugar_id, fecha):
     conn = conectar_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM plazas WHERE nombre = ?", (nombre_plaza,))
-    resultado = cursor.fetchone()
-    if resultado:
-        plaza = resultado[0]
-        cursor.execute("INSERT INTO cortes (plaza, fecha_corte) VALUES (?, ?)", (plaza, fecha))
-        conn.commit()
+    cursor.execute("INSERT INTO cortes (lugar_id, fecha_corte) VALUES (?, ?)", (lugar_id, fecha))
+    conn.commit()
     conn.close()
 
 def exportar_cortes_a_excel(nombre_archivo='cortes_exportados.xlsx') -> str:
@@ -291,48 +301,78 @@ def eliminar_corte(corte_id: int):
 # -------------------- ARREGLOS --------------------
 
 def registrar_solicitud_arreglo(nombre_plaza: str, tareas_texto: str, fecha_ingreso: str, relevadores: str):
+    from datetime import datetime
     conn = conectar_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id FROM plazas WHERE nombre = ?", (nombre_plaza,))
-    resultado = cursor.fetchone()
-    if resultado:
-        plaza_id = resultado[0]
-        tareas = [t.strip() for t in tareas_texto.splitlines() if t.strip()]
-        for tarea in tareas:
-            cursor.execute('''
-                INSERT INTO arreglos (plaza_id, tarea, fecha_ingreso, relevadores, realizada)
-                VALUES (?, ?, ?, ?, 0)
-            ''', (plaza_id, tarea, fecha_ingreso, relevadores))
-        conn.commit()
-    conn.close()
 
-def obtener_arreglos_pendientes(anio=None, mes=None, plaza=None):
+    # Validar formato de fecha_ingreso
+    try:
+        fecha_ingreso = datetime.strptime(fecha_ingreso, "%Y-%m-%d").date().isoformat()
+    except ValueError:
+        print(f"⚠️ Fecha inválida: {fecha_ingreso}")
+        conn.close()
+        return
+
+    # Buscar plaza
+    cursor.execute("SELECT id FROM plazas WHERE LOWER(nombre) = ?", (nombre_plaza.lower(),))
+    resultado = cursor.fetchone()
+    if not resultado:
+        print(f"⚠️ Plaza no encontrada: {nombre_plaza}")
+        conn.close()
+        return
+
+    plaza_id = resultado[0]
+
+    # Procesar tareas
+    tareas = [t.strip() for t in tareas_texto.splitlines() if t.strip()]
+    if not tareas:
+        print("⚠️ No se registraron tareas válidas")
+        conn.close()
+        return
+
+    # Insertar arreglos
+    for tarea in tareas:
+        cursor.execute('''
+            INSERT INTO arreglos (plaza_id, tarea, fecha_ingreso, relevadores, realizada)
+            VALUES (?, ?, ?, ?, 0)
+        ''', (plaza_id, tarea, fecha_ingreso, relevadores))
+
+    conn.commit()
+    conn.close()
+    print(f"✅ {len(tareas)} arreglo(s) registrados para plaza '{nombre_plaza}'")
+
+def obtener_arreglos_realizados(anio=None, mes=None, plaza_filtrada=None):
     conn = conectar_db()
     cursor = conn.cursor()
 
     query = '''
-        SELECT a.id, p.nombre, a.tarea, a.fecha_ingreso, a.relevadores
+        SELECT a.id,
+               p.nombre AS plaza,
+               pa.plaza_id,
+               a.tarea,
+               a.fecha_realizacion,
+               a.personas_involucradas
         FROM arreglos a
-        JOIN plazas p ON a.plaza_id = p.id
-        WHERE a.realizada = 0
+        JOIN pedidos_arreglo pa ON a.pedido_id = pa.id
+        JOIN plazas p ON pa.plaza_id = p.id
+        WHERE a.realizada = 1
     '''
-    parametros = []
+    params = []
 
     if anio and mes:
-        query += ' AND strftime("%Y", a.fecha_ingreso) = ? AND strftime("%m", a.fecha_ingreso) = ?'
-        parametros.extend([str(anio), f"{mes:02}"])
+        query += ' AND strftime("%Y", a.fecha_realizacion) = ? AND strftime("%m", a.fecha_realizacion) = ?'
+        params.extend([str(anio), f"{int(mes):02d}"])
 
-    if plaza:
-        query += ' AND p.nombre LIKE ?'
-        parametros.append(f"%{plaza}%")
+    if plaza_filtrada:
+        query += ' AND LOWER(p.nombre) LIKE ?'
+        params.append(f"%{plaza_filtrada.lower()}%")
 
-    query += ' ORDER BY a.fecha_ingreso DESC'
+    query += ' ORDER BY a.fecha_realizacion DESC'
 
-    cursor.execute(query, parametros)
+    cursor.execute(query, params)
     resultados = cursor.fetchall()
     conn.close()
 
-    # Formatear y estructurar resultados para el HTML
     def formatear_fecha(fecha_str):
         from datetime import datetime
         try:
@@ -341,12 +381,156 @@ def obtener_arreglos_pendientes(anio=None, mes=None, plaza=None):
             return fecha_str or "—"
 
     return [{
-        'id': r[0],
-        'nombre': r[1],
-        'tareas': r[2],
-        'fecha_ingreso': formatear_fecha(r[3]),
-        'relevadores': r[4],
+        'id': fila[0],
+        'nombre': fila[1],
+        'plaza_id': fila[2],
+        'tareas': fila[3],
+        'fecha_realizacion': formatear_fecha(fila[4]),
+        'personas': fila[5]
+    } for fila in resultados]
+
+
+def obtener_arreglos_pendientes(anio=None, mes=None, plaza=None):
+    conn = conectar_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT a.id,
+               p.nombre AS plaza,
+               a.tarea,
+               a.fecha_ingreso,
+               a.relevadores
+        FROM arreglos a
+        JOIN plazas p ON a.plaza_id = p.id
+        WHERE a.realizada = 0
+    '''
+    parametros = []
+    condiciones = []
+
+    if anio and mes:
+        condiciones.append('strftime("%Y", a.fecha_ingreso) = ? AND strftime("%m", a.fecha_ingreso) = ?')
+        parametros.extend([str(anio), f"{int(mes):02d}"])
+
+    if plaza:
+        condiciones.append('LOWER(p.nombre) LIKE ?')
+        parametros.append(f"%{plaza.lower()}%")
+
+    if condiciones:
+        query += ' AND ' + ' AND '.join(condiciones)
+
+    query += ' ORDER BY a.fecha_ingreso DESC'
+
+    cursor.execute(query, parametros)
+    resultados = cursor.fetchall()
+    conn.close()
+
+    def formatear_fecha(fecha_str):
+        from datetime import datetime
+        try:
+            return datetime.strptime(fecha_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except:
+            return fecha_str or "—"
+
+    return [{
+        'id': r['id'],
+        'plaza': r['plaza'],
+        'descripcion': r['tarea'],
+        'fecha_ingreso': formatear_fecha(r['fecha_ingreso']),
+        'relevadores': r['relevadores']
     } for r in resultados]
+
+def cortes_vencidos(usuario_id=None, dias_vencimiento=15):
+    from datetime import datetime, timedelta
+    conn = conectar_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    fecha_limite = (datetime.today() - timedelta(days=dias_vencimiento)).strftime('%Y-%m-%d')
+    hoy = datetime.today().strftime('%Y-%m-%d')
+    hoy_dt = datetime.today()
+
+    ignoradas_por_id = set()
+    ignoradas_por_nombre = set()
+
+    if usuario_id:
+        cursor.execute('''
+            SELECT plaza_id, nombre_plaza FROM alertas_ignoradas
+            WHERE usuario_id = ? AND tipo_alerta = 'corte' AND ignorar_hasta >= ?
+        ''', (usuario_id, hoy))
+        for r in cursor.fetchall():
+            if r['plaza_id']:
+                ignoradas_por_id.add(r['plaza_id'])
+            elif r['nombre_plaza']:
+                ignoradas_por_nombre.add(r['nombre_plaza'].strip().lower())
+
+    query = '''
+        SELECT c.id, c.nombre, c.ubicacion, c.fecha_corte, p.id AS plaza_id
+        FROM cortes c
+        LEFT JOIN plazas p ON LOWER(c.nombre) = LOWER(p.nombre)
+        WHERE c.tipo = 'plaza' AND c.fecha_corte < ?
+        ORDER BY c.fecha_corte DESC
+    '''
+    cursor.execute(query, (fecha_limite,))
+    vencidos = cursor.fetchall()
+    conn.close()
+
+    alertas = []
+    for r in vencidos:
+        plaza_id = r['plaza_id']
+        nombre = r['nombre'].strip().lower()
+
+        if plaza_id and plaza_id in ignoradas_por_id:
+            continue
+        if not plaza_id and nombre in ignoradas_por_nombre:
+            continue
+
+        dias = (hoy_dt - datetime.strptime(r['fecha_corte'], '%Y-%m-%d')).days
+        alertas.append({
+            'id': r['id'],
+            'nombre': r['nombre'],
+            'ubicacion': r['ubicacion'],
+            'fecha_corte': r['fecha_corte'],
+            'ultima_fecha': datetime.strptime(r['fecha_corte'], '%Y-%m-%d').strftime('%d/%m/%Y'),
+            'dias': dias
+        })
+
+    return alertas
+
+
+def dias_desde_ultimo_corte():
+    from datetime import datetime
+    conn = conectar_db()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    query = '''
+        SELECT nombre, ubicacion, fecha_corte
+        FROM cortes
+        WHERE tipo = 'plaza'
+        ORDER BY fecha_corte DESC
+    '''
+    cursor.execute(query)
+    cortes = cursor.fetchall()
+    conn.close()
+
+    plazas = {}
+    for r in cortes:
+        clave = (r['nombre'], r['ubicacion'])
+        fecha_corte = datetime.strptime(r['fecha_corte'], '%Y-%m-%d')
+        dias = (datetime.today() - fecha_corte).days
+
+        # Solo guardar el corte más reciente por plaza
+        if clave not in plazas:
+            plazas[clave] = {
+                'nombre': r['nombre'],
+                'ubicacion': r['ubicacion'],
+                'fecha_corte': r['fecha_corte'],
+                'dias_sin_corte': dias
+            }
+
+    return list(plazas.values())
+
 
 def marcar_tarea_realizada(arreglo_id: int, fecha_realizacion: str, personas: str):
     conn = conectar_db()
@@ -359,40 +543,57 @@ def marcar_tarea_realizada(arreglo_id: int, fecha_realizacion: str, personas: st
     conn.commit()
     conn.close()
 
-def obtener_arreglos_realizados(anio=None, mes=None, plaza_filtrada=None):
+def buscar_arreglos_por_plaza(nombre_plaza=None, anio=None, mes=None):
     conn = conectar_db()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     query = '''
-        SELECT a.id, p.nombre, a.plaza_id, a.tarea, a.fecha_realizacion, a.personas_involucradas
+        SELECT a.id,
+               p.nombre AS plaza,
+               a.tarea,
+               a.fecha_ingreso,
+               a.fecha_realizacion,
+               a.personas_involucradas
         FROM arreglos a
         JOIN plazas p ON a.plaza_id = p.id
         WHERE a.realizada = 1
     '''
-    params = []
+    filtros = []
+    condiciones = []
+
+    if nombre_plaza:
+        condiciones.append('LOWER(p.nombre) LIKE ?')
+        filtros.append(f"%{nombre_plaza.lower()}%")
 
     if anio and mes:
-        query += ' AND strftime("%Y", a.fecha_realizacion) = ? AND strftime("%m", a.fecha_realizacion) = ?'
-        params.extend([str(anio), f"{int(mes):02d}"])
+        condiciones.append('strftime("%Y", a.fecha_realizacion) = ? AND strftime("%m", a.fecha_realizacion) = ?')
+        filtros.extend([str(anio), f"{int(mes):02d}"])
 
-    if plaza_filtrada:
-        query += ' AND p.nombre LIKE ?'
-        params.append(f"%{plaza_filtrada}%")
+    if condiciones:
+        query += ' AND ' + ' AND '.join(condiciones)
 
-    cursor.execute(query, params)
+    query += ' ORDER BY a.fecha_realizacion DESC'
+
+    cursor.execute(query, filtros)
     resultados = cursor.fetchall()
+    conn.close()
 
-    arreglos = []
-    for fila in resultados:
-        arreglos.append({
-            'id': fila[0],
-            'nombre': fila[1],
-            'plaza_id': fila[2],
-            'tareas': fila[3], 
-            'fecha_realizacion': fila[4],
-            'personas': fila[5]
-        })
+    def formatear_fecha(fecha_str):
+        from datetime import datetime
+        try:
+            return datetime.strptime(fecha_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except:
+            return fecha_str or "—"
 
+    return [{
+        'id': r['id'],
+        'plaza': r['plaza'],
+        'tarea': r['tarea'],
+        'fecha_ingreso': formatear_fecha(r['fecha_ingreso']),
+        'fecha_realizacion': formatear_fecha(r['fecha_realizacion']),
+        'personas': r['personas_involucradas']
+    } for r in resultados]
 
 def eliminar_arreglo(arreglo_id: int):
     conn = conectar_db()
@@ -464,11 +665,17 @@ def ignorar_alerta(usuario_id: int, plaza_id: int, tipo_alerta: str):
 
 def obtener_arreglos_con_alerta(usuario_id):
     conn = conectar_db()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     hoy = datetime.today().date()
 
+    # Buscar tareas pendientes con plaza y fecha de ingreso directamente desde arreglos
     cursor.execute('''
-        SELECT a.id, p.nombre, a.plaza_id, a.tarea, a.fecha_ingreso
+        SELECT a.id AS arreglo_id,
+               a.tarea,
+               a.fecha_ingreso,
+               a.plaza_id,
+               p.nombre AS plaza
         FROM arreglos a
         JOIN plazas p ON a.plaza_id = p.id
         WHERE a.realizada = 0
@@ -476,32 +683,40 @@ def obtener_arreglos_con_alerta(usuario_id):
     resultados = cursor.fetchall()
 
     alertas = []
-    for id_, nombre_plaza, plaza_id, tarea, fecha_ing in resultados:
+    for r in resultados:
+        plaza_id = r['plaza_id']
         cursor.execute('''
             SELECT ignorar_hasta FROM alertas_ignoradas
             WHERE usuario_id = ? AND plaza_id = ? AND tipo_alerta = 'arreglo'
         ''', (usuario_id, plaza_id))
         ignorada = cursor.fetchone()
         if ignorada:
-            ignorar_hasta = datetime.strptime(ignorada[0], '%Y-%m-%d').date()
+            ignorar_hasta = datetime.strptime(ignorada['ignorar_hasta'], '%Y-%m-%d').date()
             if ignorar_hasta >= hoy:
                 continue
 
-        fecha_ingreso = datetime.strptime(fecha_ing, '%Y-%m-%d').date()
+        try:
+            fecha_ingreso = datetime.strptime(r['fecha_ingreso'], '%Y-%m-%d').date()
+        except:
+            continue  # Si la fecha es inválida, salteamos
+
         dias = (hoy - fecha_ingreso).days
         if dias >= 13:
             alertas.append({
-                'id': id_,
+                'id': r['arreglo_id'],
                 'plaza_id': plaza_id,
-                'tarea': tarea,
+                'tarea': r['tarea'],
                 'dias': dias,
-                'nombre': nombre_plaza
+                'nombre': r['plaza']
             })
 
     conn.close()
     return alertas
 
+
+
 def omitir_alerta_arreglo(arreglo_id: int, usuario_id: int):
+    from datetime import datetime, timedelta
     conn = conectar_db()
     cursor = conn.cursor()
 
@@ -512,14 +727,15 @@ def omitir_alerta_arreglo(arreglo_id: int, usuario_id: int):
         plaza_id = resultado[0]
         ignorar_hasta = (datetime.today() + timedelta(days=7)).strftime('%Y-%m-%d')
         cursor.execute('''
-            INSERT INTO alertas_ignoradas (usuario_id, plaza_id, tipo, ignorar_hasta)
+            INSERT INTO alertas_ignoradas (usuario_id, plaza_id, tipo_alerta, ignorar_hasta)
             VALUES (?, ?, 'arreglo', ?)
-            ON CONFLICT(usuario_id, plaza_id, tipo)
+            ON CONFLICT(usuario_id, plaza_id, tipo_alerta)
             DO UPDATE SET ignorar_hasta = excluded.ignorar_hasta
         ''', (usuario_id, plaza_id, ignorar_hasta))
         conn.commit()
 
     conn.close()
+
 
 # -------------------- CORTES (por mes/año) --------------------
 
@@ -612,37 +828,54 @@ def formatear_fecha(fecha_str):
         return fecha_str or "—"
 
 def buscar_arreglos_realizados_por_plaza(nombre_plaza=None, anio=None, mes=None):
-    with conectar_db() as conn:
-        cursor = conn.cursor()
-        query = '''
-            SELECT a.id, p.nombre, a.tarea, a.fecha_ingreso, a.fecha_realizacion, a.personas_involucradas, a.relevadores
-            FROM arreglos a
-            JOIN plazas p ON a.plaza_id = p.id
-            WHERE a.realizada = 1
-        '''
-        params = []
+    conn = conectar_db()
+    cursor = conn.cursor()
 
-        if nombre_plaza:
-            query += ' AND p.nombre LIKE ?'
-            params.append(f'%{nombre_plaza}%')
+    query = '''
+        SELECT a.id,
+               p.nombre AS plaza,
+               a.tarea,
+               a.fecha_ingreso,
+               a.fecha_realizacion,
+               a.personas_involucradas
+        FROM arreglos a
+        JOIN plazas p ON a.plaza_id = p.id
+        WHERE a.realizada = 1
+    '''
+    filtros = []
+    condiciones = []
 
-        if anio and mes:
-            query += ' AND strftime("%Y", a.fecha_realizacion) = ? AND strftime("%m", a.fecha_realizacion) = ?'
-            params.extend([str(anio), f'{int(mes):02d}'])
+    if nombre_plaza:
+        condiciones.append('LOWER(p.nombre) LIKE ?')
+        filtros.append(f"%{nombre_plaza.lower()}%")
 
-        cursor.execute(query, params)
-        resultados = cursor.fetchall()
+    if anio and mes:
+        condiciones.append('strftime("%Y", a.fecha_realizacion) = ? AND strftime("%m", a.fecha_realizacion) = ?')
+        filtros.extend([str(anio), f"{int(mes):02d}"])
 
-        return [{
-            'id': r[0],
-            'nombre': r[1],
-            'tareas': r[2],
-            'fecha_ingreso': formatear_fecha(r[3]),
-            'fecha_realizacion': formatear_fecha(r[4]),
-            'personas': r[5],
-            'relevadores': r[6]
-        } for r in resultados]
+    if condiciones:
+        query += ' AND ' + ' AND '.join(condiciones)
 
+    query += ' ORDER BY a.fecha_realizacion DESC'
 
+    cursor.execute(query, filtros)
+    resultados = cursor.fetchall()
+    conn.close()
+
+    def formatear_fecha(fecha_str):
+        from datetime import datetime
+        try:
+            return datetime.strptime(fecha_str, "%Y-%m-%d").strftime("%d/%m/%Y")
+        except:
+            return fecha_str or "—"
+
+    return [{
+        'id': r[0],
+        'plaza': r[1],
+        'tarea': r[2],
+        'fecha_ingreso': formatear_fecha(r[3]),
+        'fecha_realizacion': formatear_fecha(r[4]),
+        'personas': r[5]
+    } for r in resultados]
 
 

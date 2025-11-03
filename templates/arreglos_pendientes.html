@@ -10,44 +10,39 @@
   <div class="fondo-institucional-fija"></div>
   <div class="layout">
 
-<div class="menu-lateral">
-  <div>
-    <h2>🌿 Mantenimiento de Plazas</h2>
+    <!-- Menú lateral -->
+    <div class="menu-lateral">
+      <div>
+        <h2>🌿 Mantenimiento de Plazas</h2>
+        {% if session['rol'] == 'servicios' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+          <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+          <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
+          <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+          <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+        {% elif session['rol'] == 'secretaria' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+        {% endif %}
+      </div>
+      <a href="/logout" style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+        🚪 Cerrar sesión
+      </a>
+    </div>
 
-    {% if session['rol'] == 'servicios' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
-      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
-      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
-
-    {% elif session['rol'] == 'secretaria' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-    {% endif %}
-
-  </div>
-
-  <a href="/logout"
-     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
-    🚪 Cerrar sesión
-  </a>
-</div>
-
-
+    <!-- Contenido principal -->
     <div class="contenido-principal">
       <div class="contenedor-central">
         <h1>🛠 Arreglos Pendientes</h1>
 
         {% if mensaje %}
-          <div class="mensaje-confirmacion">
-            {{ mensaje }}
-          </div>
+          <div class="mensaje-confirmacion">{{ mensaje }}</div>
         {% endif %}
 
         <form method="GET" action="{{ url_for('arreglos_pendientes') }}" class="formulario-busqueda">
@@ -65,31 +60,36 @@
             {% for arreglo in arreglos %}
               <div class="tarjeta-arreglo">
                 <p><strong>📍 Plaza:</strong> {{ arreglo.plaza }}</p>
-                <p><strong>🔧 Tarea:</strong> {{ arreglo.descripcion }}</p>
-                <p><strong>📥 Fecha de petición:</strong> {{ arreglo.fecha_ingreso }}</p>
-                <p><strong>📌 Relevadores:</strong> {{ arreglo.relevadores or '—' }}</p>
+                <p><strong>🛠 Tarea:</strong> {{ arreglo.descripcion }}</p>
+                <ul style="margin-top: 1em;">
+                  <li style="margin-bottom: 1em;">
+                    <form method="POST" action="{{ url_for('registrar_realizacion') }}">
+                      <input type="hidden" name="id_arreglo" value="{{ arreglo.id }}">
+                      <input type="hidden" name="plaza" value="{{ arreglo.plaza }}">
+                      <input type="hidden" name="mes_anio" value="{{ mes_anio }}">
 
-                <form method="POST" action="{{ url_for('registrar_realizacion') }}">
-                  <input type="hidden" name="id_arreglo" value="{{ arreglo.id }}">
-                  <input type="hidden" name="plaza" value="{{ plaza }}">
-                  <input type="hidden" name="mes_anio" value="{{ mes_anio }}">
 
-                  <label>🗓 Fecha realizado:
-                    <input type="date" name="fecha_realizacion" required>
-                  </label>
-                  <label>👥 Personas involucradas:
-                    <input type="text" name="personas_involucradas" placeholder="Ej: López, Gómez" required>
-                  </label>
-                  <button type="submit" style="margin-top: 0.5em;">✅ Marcar como finalizado</button>
-                </form>
+                      <p><strong>📥 Fecha de petición:</strong> {{ arreglo.fecha_ingreso }}</p>
+                      <p><strong>📌 Relevadores:</strong> {{ arreglo.relevadores or '—' }}</p>
 
-                <form method="POST"
-                      action="{{ url_for('eliminar_arreglo', arreglo_id=arreglo.id) }}"
-                      onsubmit="return confirm('¿Estás seguro de que querés eliminar este arreglo?');">
-                  <input type="hidden" name="mes_anio" value="{{ mes_anio }}">
-                  <input type="hidden" name="plaza" value="{{ plaza }}">
-                  <button type="submit" class="boton-peligro">🗑️ Eliminar</button>
-                </form>
+                      <label>🗓 Fecha realizado:
+                        <input type="date" name="fecha_realizacion" required>
+                      </label>
+                      <label>👥 Personas involucradas:
+                        <input type="text" name="personas_involucradas" placeholder="Ej: López, Gómez" required>
+                      </label>
+                      <button type="submit" style="margin-top: 0.5em;">✅ Marcar como finalizado</button>
+                    </form>
+
+                    <form method="POST"
+                          action="{{ url_for('eliminar_arreglo', arreglo_id=arreglo.id) }}"
+                          onsubmit="return confirm('¿Estás seguro de que querés eliminar este arreglo?');">
+                      <input type="hidden" name="mes_anio" value="{{ mes_anio }}">
+                      <input type="hidden" name="plaza" value="{{ arreglo.plaza }}">
+                      <button type="submit" class="boton-peligro">🗑️ Eliminar</button>
+                    </form>
+                  </li>
+                </ul>
               </div>
             {% endfor %}
           </div>

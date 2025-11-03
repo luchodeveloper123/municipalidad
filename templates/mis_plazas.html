@@ -32,53 +32,38 @@
       font-size: 0.95em;
       color: #333;
     }
-    .btn-global-download {
-      display: inline-block;
-      padding: 10px 20px;
-      background: #2b4d66;
-      color: white;
-      border-radius: 4px;
-      text-decoration: none;
-      font-size: 1em;
-    }
-    .btn-global-download:hover {
-      background: #1b3150;
-    }
   </style>
 </head>
 <body>
   <div class="fondo-institucional-fija"></div>
   <div class="layout">
-<div class="menu-lateral">
-  <div>
-    <h2>🌿 Mantenimiento de Plazas</h2>
+    <div class="menu-lateral">
+      <div>
+        <h2>🌿 Mantenimiento de Plazas</h2>
 
-    {% if session['rol'] == 'servicios' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
-      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
-      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+        {% if session['rol'] == 'servicios' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+          <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+          <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
+          <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+          <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+        {% elif session['rol'] == 'secretaria' %}
+          <button onclick="window.location.href='/'">🏠 Inicio</button>
+          <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+          <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+          <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+        {% endif %}
+      </div>
 
-    {% elif session['rol'] == 'secretaria' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-    {% endif %}
-
-  </div>
-
-  <a href="/logout"
-     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
-    🚪 Cerrar sesión
-  </a>
-</div>
-
-
+      <a href="/logout"
+         style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+        🚪 Cerrar sesión
+      </a>
+    </div>
 
     <div class="contenido-principal">
       <div class="contenedor-arreglos-realizados">
@@ -86,22 +71,16 @@
 
         <form method="POST"
               action="{{ url_for('mis_plazas') }}"
-              class="filtro-mensual"
               style="display:flex; flex-direction:column;
                      align-items:flex-start; gap:0.5em;
                      max-width:300px; margin-bottom:2em;">
-          <label for="busqueda">🏞 Plaza:</label>
+          <label for="busqueda">🏞 Buscar plaza:</label>
           <input type="text" id="busqueda"
                  name="busqueda"
-                 placeholder="Buscar plaza..."
+                 placeholder="Ej: Plaza San Martín"
                  value="{{ texto }}"
                  style="width:100%; padding:6px;">
-          <label for="mes_anio">📅 Mes:</label>
-          <input type="month" id="mes_anio"
-                 name="mes_anio"
-                 value="{{ mes_anio }}"
-                 style="width:100%; padding:6px;">
-          <button type="submit" style="padding:6px 12px;">🔍 Filtrar</button>
+          <button type="submit" style="padding:6px 12px;">🔍 Buscar</button>
         </form>
 
         {% if plazas %}
@@ -112,52 +91,13 @@
                 <h4>{{ plaza[1] }}</h4>
                 <p class="info-item">📍 {{ plaza[2] }}</p>
 
-                {% set fechas = historial.get(plaza_id, {}).fechas or [] %}
-                {% if fechas %}
-                  <p class="info-item">📅 Días de corte: {{ fechas|length }}</p>
-                  <p class="info-item">🗓 Fechas:</p>
-                  <ul style="list-style:none; padding:0; margin:0;">
-                    {% for corte in fechas %}
-                      <li style="display:flex;
-                                 justify-content:space-between;
-                                 align-items:center;
-                                 margin-bottom:4px;">
-                        <span style="font-size:0.95em; color:#2c3e50;">
-                          {{ corte.fecha }}
-                        </span>
-                        <form action="/eliminar-corte"
-                              method="POST"
-                              style="margin:0;"
-                              onsubmit="return confirm('¿Eliminar este corte?');">
-                          <input type="hidden"
-                                 name="corte_id"
-                                 value="{{ corte.id }}">
-                          <button type="submit"
-                                  style="background:none;
-                                         border:none;
-                                         color:#e74c3c;
-                                         cursor:pointer;
-                                         font-size:1.1em;">
-                            🗑️
-                          </button>
-                        </form>
-                      </li>
-                    {% endfor %}
-                  </ul>
-                {% else %}
-                  <p class="info-item"
-                     style="font-style:italic; color:gray;">
-                    No hay cortes este mes.
-                  </p>
-                {% endif %}
-
                 <!-- Eliminar plaza -->
                 <div style="text-align:right; margin-top:8px;">
                   <a href="#"
                      style="color:#e74c3c;
                             text-decoration:none;
                             font-size:0.9em;"
-                     onclick="if(confirm('¿Eliminar esta plaza completa?')){ this.nextElementSibling.submit(); }">
+                     onclick="if(confirm('¿Eliminar esta plaza?')){ this.nextElementSibling.submit(); }">
                     🗑️ Eliminar plaza
                   </a>
                   <form action="/eliminar-plaza"
@@ -171,20 +111,11 @@
               </div>
             {% endfor %}
           </div>
-
-          <!-- Botón único para descargar todos los cortes del mes -->
-          <div style="text-align:center; margin:2em 0;">
-            <a href="{{ url_for('exportar_cortes', mes_anio=mes_anio) }}"
-               class="btn-global-download">
-              📥 Descargar cortes del mes
-            </a>
-          </div>
-
         {% else %}
           <p style="margin-top:2em;
                     font-style:italic;
                     color:gray;">
-            No hay plazas para los filtros seleccionados.
+            No hay plazas registradas o coincidentes con la búsqueda.
           </p>
         {% endif %}
       </div>

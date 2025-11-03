@@ -3,9 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>Servicios Urbanos</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="icon" type="image/jpeg" href="{{ url_for('static', filename='logo.jpg') }}">
   <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #f9f9f9;
+    }
+
     .fondo-institucional-fija {
       position: fixed;
       top: 0; left: 0;
@@ -14,46 +19,116 @@
       z-index: -1;
     }
 
-    .contenido-principal {
-      flex: 1;
-      padding: 20px;
-      box-sizing: border-box;
+    .layout {
+      display: flex;
+      min-height: 100vh;
     }
 
-    .tarjeta-contenedora {
-      background: rgba(255,255,255,0.95);
+
+    .menu-lateral {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 260px;
+      min-height: 100vh;
+      background-color: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(4px);
-      max-width: 700px;
-      margin: 0 auto;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border-right: 1px solid #ddd;
+      padding: 25px 20px;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.05);
+      border-radius: 0 10px 10px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 100;
     }
-    .tarjeta-contenedora h1 {
-      margin: 0 0 20px;
+.menu-lateral button {
+  font-weight: bold;
+}
+
+
+    .menu-lateral h2 {
+      font-size: 18px;
+      margin-bottom: 20px;
+      color: #2c3e50;
+      font-weight: bold;
+    }
+
+    .menu-lateral button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      background-color: #ecf0f1;
+      color: #333;
+      border: none;
+      padding: 10px 12px;
+      text-align: left;
+      border-radius: 5px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    .menu-lateral button:hover {
+      background-color: #d0e6f5;
+    }
+
+    .menu-lateral a {
+      margin-top: 20px;
+      color: #e74c3c;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+.contenido-principal {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+}
+
+
+
+
+.tarjeta-contenedora {
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(4px);
+  max-width: 700px;
+  width: 100%;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+
+
+    h1 {
       text-align: center;
-      font-size: 1.4em;
       color: #2b4d66;
+      margin-bottom: 20px;
     }
 
     .filtro-mensual {
       display: flex;
       justify-content: center;
-      align-items: center;
       gap: 12px;
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
+
     .filtro-mensual label {
       font-size: 0.95em;
       color: #2b4d66;
     }
+
     .filtro-mensual input[type="month"] {
       padding: 6px 10px;
       font-size: 0.9em;
       border: 1px solid #ccc;
       border-radius: 4px;
     }
+
     .filtro-mensual button {
       padding: 6px 12px;
       font-size: 0.9em;
@@ -63,14 +138,35 @@
       color: white;
       cursor: pointer;
     }
-    .filtro-mensual button:hover {
-      background: #1b3150;
+
+    .cuadro-arreglos {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1em;
+      margin-top: 1.5em;
     }
 
-    #chart-wrapper {
-      width: 100%;
-      height: 360px;
-      margin-top: 16px;
+    .tarjeta-arreglo {
+      background-color: #f0f8ff;
+      border: 1px solid #bcd;
+      padding: 12px;
+      border-radius: 8px;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .tarjeta-arreglo h4 {
+      margin: 0;
+      font-size: 1.1em;
+      color: #2b4d66;
+    }
+
+    .info-item {
+      margin: 0;
+      font-size: 0.95em;
+      color: #333;
     }
 
     .sin-datos {
@@ -91,38 +187,31 @@
 </head>
 <body>
   <div class="fondo-institucional-fija"></div>
+
   <div class="layout">
-
-<div class="menu-lateral">
-  <div>
-    <h2>🌿 Mantenimiento de Plazas</h2>
-
-    {% if session['rol'] == 'servicios' %}
-      <button onclick="window.location.href='/'">🏠 Inicio</button>
-      <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
-      <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
-      <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
-      <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
-      <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-      <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
-      <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
-
-    {% elif session['rol'] == 'secretaria' %}
+    <div class="menu-lateral">
+      <h2>🌿 Mantenimiento de Plazas</h2>
+      {% if session['rol'] == 'servicios' %}
+        <button onclick="window.location.href='/'">🏠 Inicio</button>
+        <button onclick="window.location.href='/nueva-plaza'">➕ Nueva Plaza</button>
+        <button onclick="window.location.href='/registrar-corte'">✂️ Registrar Corte</button>
+        <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
+        <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
+        <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+        <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
+        <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
+        <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
+      {% elif session['rol'] == 'secretaria' %}
       <button onclick="window.location.href='/'">🏠 Inicio</button>
       <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
       <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
       <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
-    {% endif %}
-
-  </div>
-
-  <a href="/logout"
-     style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
-    🚪 Cerrar sesión
-  </a>
-</div>
-
-
+      {% endif %}
+    <a href="/logout"
+       style="color:#e74c3c; text-decoration:none; font-weight:bold; font-size:0.95em;">
+      🚪 Cerrar sesión
+    </a>
+    </div>
 
     <div class="contenido-principal">
       <div class="tarjeta-contenedora">
@@ -131,19 +220,18 @@
         <form method="GET" action="{{ url_for('ver_grafico') }}" class="filtro-mensual">
           <label for="mes_anio">Mes/Año:</label>
           <input type="month" id="mes_anio" name="mes_anio" value="{{ mes_anio }}">
-          <button type="submit">Ver gráfico</button>
+          <button type="submit">Ver tabla</button>
         </form>
 
-        {% if labels and data %}
-          <div id="chart-wrapper">
-            <canvas
-              id="graficoCortes"
-              data-labels='{{ labels|tojson }}'
-              data-values='{{ data|tojson }}'></canvas>
+        {% if combinado %}
+          <div class="cuadro-arreglos">
+            {% for nombre, cantidad in combinado %}
+              <div class="tarjeta-arreglo">
+                <h4>{{ nombre }}</h4>
+                <p class="info-item">Cantidad de cortes: {{ cantidad }}</p>
+              </div>
+            {% endfor %}
           </div>
-
-          <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-          <script src="{{ url_for('static', filename='js/grafico.js') }}"></script>
         {% else %}
           <p class="sin-datos">No hay registros de corte para ese período.</p>
         {% endif %}

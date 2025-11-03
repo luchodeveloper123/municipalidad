@@ -52,6 +52,7 @@
       <button onclick="window.location.href='/registrar-arreglo'">🛠 Registrar Arreglo</button>
       <button onclick="window.location.href='/arreglos-pendientes'">🛠 Ver arreglos pendientes</button>
       <button onclick="window.location.href='/arreglos-realizados'">✅ Ver arreglos realizados</button>
+      <button onclick="window.location.href='/plazas-cortadas'">✂️ Plazas Cortadas</button>
       <button onclick="window.location.href='/mis-plazas'">📋 Ver mis plazas</button>
       <button onclick="window.location.href='/grafico'">📊 Ver gráfico</button>
 
@@ -87,44 +88,40 @@
         </form>
 
         {% if arreglos %}
-          <div class="cuadro-arreglos">
-            {% for arreglo in arreglos %}
-              <div class="tarjeta-arreglo">
-                <h4>{{ arreglo.nombre }}</h4>
+  <div class="cuadro-arreglos">
+    {% for arreglo in arreglos %}
+      <div class="tarjeta-arreglo">
+        <h4>{{ arreglo.plaza }}</h4>
 
-                {% if arreglo.relevadores %}
-                  <p class="info-item">📌 Pedido por: {{ arreglo.relevadores }}</p>
-                {% endif %}
+        <p class="info-item">🔧 {{ arreglo.tarea }}</p>
+        <p class="info-item">✅ Realizado: {{ arreglo.fecha_realizacion }}</p>
 
-                <p class="info-item">🔧 {{ arreglo.tareas }}</p>
-                <p class="info-item">📥 Pedido: {{ arreglo.fecha_ingreso }}</p>
-                <p class="info-item">✅ Arreglo: {{ arreglo.fecha_realizacion }}</p>
-
-                {% if 'Responsable' in arreglo.personas %}
-                  {% set partes = arreglo.personas.split('),') %}
-                  {% for persona in partes %}
-                    {% if 'Responsable' in persona %}
-                      <p class="info-item">👤 Responsable: {{ persona.strip() }})</p>
-                    {% else %}
-                      <p class="info-item">🤝 Involucrado: {{ persona.strip() }}</p>
-                    {% endif %}
-                  {% endfor %}
-                {% else %}
-                  <p class="info-item">👥 Involucrados: {{ arreglo.personas }}</p>
-                {% endif %}
-              </div>
-            {% endfor %}
-          </div>
-
-          <div style="text-align:center; margin:2em 0;">
-            <a href="{{ url_for('descargar_arreglos_excel', plaza=plaza, mes=mes_anio) }}"
-            class="btn-global-download">📥 Descargar en Excel</a>
-          </div>
+        {% if 'Responsable' in arreglo.personas %}
+          {% set partes = arreglo.personas.split('),') %}
+          {% for persona in partes %}
+            {% if 'Responsable' in persona %}
+              <p class="info-item">👤 Responsable: {{ persona.strip() }})</p>
+            {% else %}
+              <p class="info-item">🤝 Involucrado: {{ persona.strip() }}</p>
+            {% endif %}
+          {% endfor %}
         {% else %}
-          <p style="margin-top: 2em; font-style: italic; color: gray;">
-            No hay arreglos realizados para los filtros seleccionados.
-          </p>
+          <p class="info-item">👥 Involucrados: {{ arreglo.personas }}</p>
         {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div style="text-align:center; margin:2em 0;">
+    <a href="{{ url_for('descargar_arreglos_excel', plaza=plaza, mes=mes_anio) }}"
+       class="btn-global-download">📥 Descargar en Excel</a>
+  </div>
+{% else %}
+  <p style="margin-top: 2em; font-style: italic; color: gray;">
+    No hay arreglos realizados para los filtros seleccionados.
+  </p>
+{% endif %}
+
       </div>
     </div>
   </div>
