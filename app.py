@@ -412,7 +412,7 @@ def login():
             if user['rol'] == 'servicios':
                 return redirect(url_for('inicio'))
             elif user['rol'] == 'secretaria':
-                return redirect(url_for('registrar_arreglo'))
+                return redirect(url_for('registrar_arreglo_view'))
 
         return render_template('login.html', error="Credenciales incorrectas.")
 
