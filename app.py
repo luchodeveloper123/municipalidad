@@ -459,33 +459,28 @@ def logout():
 
 # -------------------- CONSULTA DE PLAZAS --------------------
 
-@app.route('/mis-plazas', methods=['GET', 'POST'])
-@solo_servicios
+@app.route('/mis-plazas')
 def mis_plazas():
-    if 'usuario_id' not in session:
+    usuario_id = session.get('usuario_id')
+    rol = session.get('rol')
+
+    if not usuario_id:
         return redirect('/login')
 
-    texto = request.form.get('busqueda', '').strip() if request.method == 'POST' else ''
-    usuario_id = session['usuario_id']
-
     conn = conectar_db()
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    if texto:
-        cursor.execute('''
-            SELECT id, nombre, ubicacion
-            FROM plazas
-            WHERE usuario_id = ? AND activa = 1 AND nombre LIKE ?
-        ''', (usuario_id, f'%{texto}%'))
+
+    if rol == 'servicios':
+        cursor.execute("SELECT * FROM plazas ORDER BY nombre ASC")
     else:
-        cursor.execute('''
-            SELECT id, nombre, ubicacion
-            FROM plazas
-            WHERE usuario_id = ? AND activa = 1
-        ''', (usuario_id,))
+        cursor.execute("SELECT * FROM plazas WHERE usuario_id = ? ORDER BY nombre ASC", (usuario_id,))
+
     plazas = cursor.fetchall()
     conn.close()
 
-    return render_template('mis_plazas.html', plazas=plazas, texto=texto)
+    return render_template('mis_plazas.html', plazas=plazas)
+
 
 
 # -------------------- EXPORTACIÓN DE DATOS --------------------
