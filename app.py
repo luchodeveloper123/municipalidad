@@ -467,19 +467,39 @@ def mis_plazas():
     if not usuario_id:
         return redirect('/login')
 
+    termino = request.args.get('busqueda', '').strip()
+
     conn = conectar_db()
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
     if rol == 'servicios':
-        cursor.execute("SELECT * FROM plazas ORDER BY nombre ASC")
+        if termino:
+            cursor.execute("""
+                SELECT * FROM plazas
+                WHERE nombre LIKE ?
+                ORDER BY nombre ASC
+            """, ('%' + termino + '%',))
+        else:
+            cursor.execute("SELECT * FROM plazas ORDER BY nombre ASC")
     else:
-        cursor.execute("SELECT * FROM plazas WHERE usuario_id = ? ORDER BY nombre ASC", (usuario_id,))
+        if termino:
+            cursor.execute("""
+                SELECT * FROM plazas
+                WHERE usuario_id = ? AND nombre LIKE ?
+                ORDER BY nombre ASC
+            """, (usuario_id, '%' + termino + '%'))
+        else:
+            cursor.execute("""
+                SELECT * FROM plazas
+                WHERE usuario_id = ?
+                ORDER BY nombre ASC
+            """, (usuario_id,))
 
     plazas = cursor.fetchall()
     conn.close()
 
-    return render_template('mis_plazas.html', plazas=plazas)
+    return render_template('mis_plazas.html', plazas=plazas, texto=termino)
 
 
 
@@ -759,6 +779,7 @@ def descargar_arreglos_excel():
         as_attachment=True,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
+
 
 
 
