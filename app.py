@@ -501,6 +501,9 @@ def mis_plazas():
 
     return render_template('mis_plazas.html', plazas=plazas, texto=termino)
 
+# comentario
+
+
 
 
 # -------------------- EXPORTACIÓN DE DATOS --------------------
